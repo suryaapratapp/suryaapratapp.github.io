@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#1d4ed8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Hexagon Container -->
+  <path d="M50 5 L93 28 L93 72 L50 95 L7 72 L7 28 Z" stroke="#1e293b" stroke-width="6" />
+  
+  <!-- K -->
+  <path d="M30 30 L30 70" stroke="#334155" />
+  <path d="M30 50 L50 30" stroke="#334155" />
+  <path d="M30 50 L50 70" stroke="#334155" />
+  
+  <!-- D (Stylized with Arrows) -->
+  <path d="M55 30 L70 30 C82 30 82 50 70 50 L65 50" stroke="#2563eb" /> <!-- Top half -->
+  <path d="M55 70 L70 70 C82 70 82 50 70 50 L75 45" stroke="#2563eb" /> <!-- Bottom half -->
+  <path d="M75 55 L70 50" stroke="#2563eb" /> <!-- Arrow tip detail -->
+</svg>
