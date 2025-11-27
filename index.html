@@ -111,7 +111,7 @@
             },
             {
                 id: 6,
-                title: "Decorative Acrylics",
+                title: "Acrylic Sheets",
                 items: ["Acrylic Mop Sheet", "Cast Acrylic Sheet"],
                 desc: "Premium finish sheets with unique textures for aesthetic applications.",
                 industry: "Interior Design, Luxury Furniture, Lighting.",
@@ -157,9 +157,9 @@
         ];
 
         const TEAM = [
-            { name: "Suresh Khanna", role: "Managing Director", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400" },
-            { name: "Anita Desai", role: "Product Manager", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400" },
-            { name: "Vikram Singh", role: "Technical Lead", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400" }
+            { name: "Radhey Shyam Bhardwaj", role: "Proprietor", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400" },
+            { name: "Krishna Devi", role: "Proprietor", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400" },
+            { name: "Pankaj Sharma", role: "Head of Operations", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400" }
         ];
 
         // --- Helper Components ---
@@ -400,7 +400,7 @@
                                 Since our inception, KD Enterprises has been dedicated to bridging the gap between raw material manufacturing and industrial application. We understand that in engineering, even a millimeter of variance matters.
                             </p>
                             <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                                We supply a vast inventory of <strong>Acrylic, Nylon, Delrin, Bakelite, and Fiberglass</strong> products. Our state-of-the-art cutting and machining facilities ensure that you receive materials ready for your assembly line.
+                                We supply a vast inventory of <strong>Acrylic, Nylon, Delrin, Bakelite, Fiberglass</strong> products and much more. Our state-of-the-art cutting and machining facilities ensure that you receive materials ready for your assembly line.
                             </p>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -442,19 +442,31 @@
             </div>
         );
 
-        const ContactSection = () => {
-            const [formStatus, setFormStatus] = useState('idle');
+        const [formStatus, setFormStatus] = useState('idle');
 
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                setFormStatus('sending');
-                // Simulate API call
-                setTimeout(() => {
-                    setFormStatus('success');
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setFormStatus("sending");
+        
+            try {
+                const response = await fetch("https://formspree.io/f/mblvdyan", {
+                    method: "POST",
+                    body: new FormData(e.target),
+                    headers: { Accept: "application/json" }
+                });
+        
+                if (response.ok) {
+                    setFormStatus("success");
                     e.target.reset();
-                    setTimeout(() => setFormStatus('idle'), 5000);
-                }, 1500);
-            };
+                    setTimeout(() => setFormStatus("idle"), 5000);
+                } else {
+                    setFormStatus("error");
+                }
+            } catch (error) {
+                setFormStatus("error");
+            }
+        };
+
 
             return (
                 <div className="pt-32 pb-24 bg-white">
@@ -472,73 +484,128 @@
                                             <div className="bg-blue-500/50 p-3 rounded-lg"><Icon name="phone" className="w-6 h-6" /></div>
                                             <div>
                                                 <h4 className="font-bold text-lg">Phone</h4>
-                                                <p className="text-blue-100">+91 98765 43210</p>
-                                                <p className="text-blue-100">+91 11 2345 6789</p>
+                                                <p className="text-blue-100">+91 9899518970</p>
+                                                <p className="text-blue-100">+91 9718516548</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start space-x-4">
                                             <div className="bg-blue-500/50 p-3 rounded-lg"><Icon name="mail" className="w-6 h-6" /></div>
                                             <div>
                                                 <h4 className="font-bold text-lg">Email</h4>
-                                                <p className="text-blue-100">inquiry@kdenterprises.com</p>
-                                                <p className="text-blue-100">sales@kdenterprises.com</p>
+                                                <p className="text-blue-100">kd.enterprises2009@yahoo.in</p>
+                                                <p className="text-blue-100">sales@kd-enterprises.co.in</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start space-x-4">
                                             <div className="bg-blue-500/50 p-3 rounded-lg"><Icon name="map-pin" className="w-6 h-6" /></div>
                                             <div>
                                                 <h4 className="font-bold text-lg">Head Office</h4>
-                                                <p className="text-blue-100">Plot No. 45, Industrial Area Phase II,<br/>New Delhi, 110020, India</p>
+                                                <p className="text-blue-100">Plot No. B41, Bhagat Singh Colony Ballabgarh,<br/>Faridabad-121004, Haryana, India</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="mt-12 flex space-x-4">
-                                        {['facebook', 'twitter', 'instagram', 'linkedin'].map((social, i) => (
-                                            <div key={i} className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors cursor-pointer">
-                                                <Icon name={social} className="w-5 h-5" />
-                                            </div>
-                                        ))}
+                                        {/* WhatsApp */}
+                                        <a 
+                                            href="https://wa.me/919718516548"
+                                            target="_blank"
+                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
+                                        >
+                                            <Icon name="whatsapp" className="w-5 h-5" />
+                                        </a>
+                                    
+                                        {/* Twitter */}
+                                        <a 
+                                            href="https://x.com/KDEnterprises16"
+                                            target="_blank"
+                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
+                                        >
+                                            <Icon name="twitter" className="w-5 h-5" />
+                                        </a>
+                                    
+                                        {/* LinkedIn */}
+                                        <a 
+                                            href="https://www.linkedin.com/company/kd-enterprises-fbd/" 
+                                            target="_blank"
+                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
+                                        >
+                                            <Icon name="linkedin" className="w-5 h-5" />
+                                        </a>
                                     </div>
                                 </div>
                             </div>
-
                             {/* Form Side */}
                             <div className="lg:w-3/5 p-12 bg-white">
                                 <h2 className="text-3xl font-bold text-slate-900 mb-8">Send us a Message</h2>
+                            
                                 <form onSubmit={handleSubmit} className="space-y-6">
+                            
                                     <div className="grid md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-slate-700">First Name</label>
-                                            <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="John" />
+                                            <input 
+                                                required 
+                                                type="text" 
+                                                name="first_name"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
+                                                placeholder="John" 
+                                            />
                                         </div>
+                            
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-slate-700">Last Name</label>
-                                            <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="Doe" />
+                                            <input 
+                                                required 
+                                                type="text" 
+                                                name="last_name"
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
+                                                placeholder="Smith" 
+                                            />
                                         </div>
                                     </div>
+                            
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Email Address</label>
-                                        <input required type="email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="john@company.com" />
+                                        <input 
+                                            required 
+                                            type="email" 
+                                            name="email"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
+                                            placeholder="john@company.com" 
+                                        />
                                     </div>
+                            
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Interested In</label>
-                                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+                                        <select 
+                                            name="interest"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                                        >
                                             <option>General Inquiry</option>
                                             <option>Bulk Order Quote</option>
                                             <option>Custom Fabrication</option>
                                             <option>Technical Support</option>
                                         </select>
                                     </div>
+                            
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Message</label>
-                                        <textarea required rows="4" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="Tell us about your requirements..."></textarea>
+                                        <textarea 
+                                            required 
+                                            rows="4" 
+                                            name="message"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
+                                            placeholder="Tell us about your requirements..."
+                                        ></textarea>
                                     </div>
-                                    
+                            
                                     <button 
                                         disabled={formStatus === 'sending'}
                                         type="submit" 
-                                        className={`w-full py-4 rounded-lg font-bold text-white transition-all flex items-center justify-center ${formStatus === 'success' ? 'bg-green-600' : 'bg-slate-900 hover:bg-slate-800'}`}
+                                        className={`w-full py-4 rounded-lg font-bold text-white transition-all flex items-center justify-center ${
+                                            formStatus === 'success' ? 'bg-green-600' : 'bg-slate-900 hover:bg-slate-800'
+                                        }`}
                                     >
                                         {formStatus === 'sending' ? (
                                             <>Processing...</>
@@ -601,7 +668,7 @@
                     </div>
                     
                     <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-                        <p>&copy; 2023 KD Enterprises. All rights reserved.</p>
+                        <p>&copy; 2025 KD Enterprises. All rights reserved.</p>
                         <div className="flex space-x-6 mt-4 md:mt-0">
                             <a href="#" className="hover:text-white">Privacy Policy</a>
                             <a href="#" className="hover:text-white">Terms of Service</a>
