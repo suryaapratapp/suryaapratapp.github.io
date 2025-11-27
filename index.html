@@ -184,21 +184,11 @@
             }, [name]);
             return <i data-lucide={name} className={className}></i>;
         };
-
-        // --- Logo Component (SVG) ---
+        
+        // --- Logo Component ---
+        
         const KDLogo = ({ className }) => (
-            <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {/* Hexagon */}
-                <path d="M50 5 L93 28 L93 72 L50 95 L7 72 L7 28 Z" className="stroke-slate-900" />
-                {/* K */}
-                <path d="M32 30 L32 70" className="stroke-slate-600" />
-                <path d="M32 50 L52 30" className="stroke-slate-600" />
-                <path d="M32 50 L52 70" className="stroke-slate-600" />
-                {/* D */}
-                <path d="M58 30 L72 30 C84 30 84 50 72 50 L68 50" className="stroke-blue-600" />
-                <path d="M58 70 L72 70 C84 70 84 50 72 50 L78 45" className="stroke-blue-600" />
-                <path d="M78 55 L72 50" className="stroke-blue-600" />
-            </svg>
+            <img src="kde-logo.jpeg" alt="KD Enterprises Logo" className={className} />
         );
 
         const SectionTitle = ({ title, subtitle }) => (
@@ -219,7 +209,7 @@
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-20 items-center">
                             <a href="#" className="flex items-center text-2xl font-extrabold tracking-tight" onClick={() => setTab('Home')}>
-                                <KDLogo className="w-10 h-10 mr-2" />
+                                <KDLogo className="w-10 h-10 mr-2 object-contain" />
                                 <div>
                                     <h1 className="text-2xl font-bold text-slate-900 leading-none tracking-tight">KD Enterprises</h1>
                                     <p className="text-xs text-slate-500 font-medium tracking-widest uppercase">Industrial Solutions</p>
@@ -288,7 +278,7 @@
                                 <span className="text-blue-100 text-sm font-semibold tracking-wide uppercase">Make in India</span>
                             </div>
                             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-                                Engineering the Future with <span className="text-blue-400">Precision Plastics</span>
+                                Engineering the Future with <span className="text-blue-400">Precision Materials</span>
                             </h1>
                             <p className="text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl">
                                 KD Enterprises is your premier source for industrial-grade Acrylic, Nylon, Bakelite, and custom engineering components. We deliver durability and precision for every industry.
