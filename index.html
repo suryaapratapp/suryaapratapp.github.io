@@ -67,13 +67,18 @@
         .animation-delay-2000 {
             animation-delay: 2s;
         }
+
+        @media print {
+            nav, footer, .no-print { display: none !important; }
+            main { padding-top: 0 !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- Data Constants ---
 
@@ -171,9 +176,9 @@
         ];
 
         const TEAM = [
-            { name: "Radhey Shyam Bhardwaj", role: "Advisor", initials: "RB" },
-            { name: "Krishna Devi", role: "Proprietor", initials: "KD" },
-            { name: "Pankaj Sharma", role: "Head of Operations", initials: "PS" }
+            { name: "Radhey Shyam Bhardwaj", role: "Advisor", initials: "RB", img: "https://ui-avatars.com/api/?name=RS&background=0D8ABC&color=fff" },
+            { name: "Krishna Devi", role: "Proprietor", initials: "KD", img: "https://ui-avatars.com/api/?name=KD&background=0D8ABC&color=fff" },
+            { name: "Pankaj Sharma", role: "Head of Operations", initials: "PS", img: "https://ui-avatars.com/api/?name=PS&background=0D8ABC&color=fff" }
         ];
 
         // --- Helper Components ---
@@ -185,10 +190,9 @@
             return <i data-lucide={name} className={className}></i>;
         };
         
-        // --- Logo Component ---
-        
         const KDLogo = ({ className }) => (
-            <img src="kd-logo.png" alt="KD Enterprises Logo" className={className} />
+            // Replaced with a simple styled div for logo if image is missing, or keep the image tag
+            <div className={`flex items-center justify-center bg-blue-600 text-white font-bold rounded-lg ${className}`}>KD</div>
         );
 
         const SectionTitle = ({ title, subtitle }) => (
@@ -199,17 +203,347 @@
             </div>
         );
 
+        // --- Calculator Component ---
+
+        const CalculatorSection = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [password, setPassword] = useState("");
+            const [error, setError] = useState("");
+
+            // Calculator State
+            const [inputs, setInputs] = useState({
+                vLen: 2440, vWid: 1220, vCost: 5000,
+                cLen: 600, cWid: 400, blade: 3,
+                pLabour: 5, pPack: 5, pTrans: 5, pProfit: 20
+            });
+            const [results, setResults] = useState(null);
+            const canvasRef = useRef(null);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (password === "kd123") {
+                    setIsAuthenticated(true);
+                    setError("");
+                } else {
+                    setError("Incorrect password");
+                }
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setInputs(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+            };
+
+            const drawDiagram = (sheetL, sheetW, cutL, cutW, cols, rows, gap) => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+
+                // Scale logic
+                const padding = 20;
+                const availW = canvas.parentElement.offsetWidth - (padding * 2);
+                const availH = 300; 
+
+                const sheetRatio = sheetL / sheetW;
+                
+                let drawW, drawH;
+                if (availW / availH > sheetRatio) {
+                    drawH = availH;
+                    drawW = drawH * sheetRatio;
+                } else {
+                    drawW = availW;
+                    drawH = drawW / sheetRatio;
+                }
+
+                canvas.width = drawW + padding;
+                canvas.height = drawH + padding;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.translate(padding/2, padding/2);
+
+                // Draw Master Sheet
+                ctx.fillStyle = '#e2e8f0';
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 2;
+                ctx.fillRect(0, 0, drawW, drawH);
+                ctx.strokeRect(0, 0, drawW, drawH);
+
+                // Draw Cuts
+                const scale = drawW / sheetL;
+                const drawCutL = cutL * scale;
+                const drawCutW = cutW * scale;
+                const drawGap = gap * scale;
+
+                ctx.fillStyle = '#3b82f6';
+                ctx.strokeStyle = '#1e40af';
+                ctx.lineWidth = 1;
+
+                for(let c = 0; c < cols; c++) {
+                    for(let r = 0; r < rows; r++) {
+                        const x = c * (drawCutL + drawGap);
+                        const y = r * (drawCutW + drawGap);
+                        ctx.fillRect(x + 1, y + 1, drawCutL - 2, drawCutW - 2);
+                        ctx.strokeRect(x, y, drawCutL, drawCutW);
+                    }
+                }
+            };
+
+            const calculate = () => {
+                const { vLen, vWid, vCost, cLen, cWid, blade, pLabour, pPack, pTrans, pProfit } = inputs;
+
+                if (vLen <= 0 || vWid <= 0 || cLen <= 0 || cWid <= 0) {
+                    alert('Please enter valid dimensions');
+                    return;
+                }
+
+                const calcGrid = (L, W, l, w, gap) => {
+                    const cols = Math.floor((L + gap) / (l + gap)); 
+                    const rows = Math.floor((W + gap) / (w + gap));
+                    return { count: Math.max(0, cols * rows), cols, rows };
+                };
+
+                const optA = calcGrid(vLen, vWid, cLen, cWid, blade);
+                const optB = calcGrid(vLen, vWid, cWid, cLen, blade);
+
+                let bestFit = (optA.count >= optB.count) ? 
+                    { ...optA, fitL: cLen, fitW: cWid, rotated: false } : 
+                    { ...optB, fitL: cWid, fitW: cLen, rotated: true };
+
+                if (bestFit.count === 0) {
+                    alert('Cut size too big for sheet');
+                    return;
+                }
+
+                const rawCostPerPiece = vCost / bestFit.count;
+                const laborCost = rawCostPerPiece * (pLabour / 100);
+                const packCost = rawCostPerPiece * (pPack / 100);
+                const transCost = rawCostPerPiece * (pTrans / 100);
+                const totalCostBasis = rawCostPerPiece + laborCost + packCost + transCost;
+                const profitAmt = totalCostBasis * (pProfit / 100);
+                const finalPrice = totalCostBasis + profitAmt;
+
+                const usedArea = bestFit.count * (cLen * cWid);
+                const totalArea = vLen * vWid;
+                const efficiency = ((usedArea / totalArea) * 100).toFixed(1);
+
+                setResults({
+                    pieces: bestFit.count,
+                    efficiency,
+                    finalPrice: finalPrice.toFixed(2),
+                    rotated: bestFit.rotated,
+                    breakdown: { rawCostPerPiece, laborCost, packCost, transCost, profitAmt },
+                    layout: bestFit
+                });
+
+                // Trigger draw after state update using timeout to ensure canvas is rendered
+                setTimeout(() => {
+                    drawDiagram(vLen, vWid, bestFit.fitL, bestFit.fitW, bestFit.cols, bestFit.rows, blade);
+                }, 100);
+            };
+
+            const copyTable = () => {
+                const range = document.createRange();
+                range.selectNodeContents(document.getElementById('quoteTable'));
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand('copy');
+                alert("Table copied!");
+            };
+
+            if (!isAuthenticated) {
+                return (
+                    <div className="pt-32 pb-24 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+                        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-100">
+                            <div className="text-center mb-6">
+                                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                                    <Icon name="lock" className="w-8 h-8" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-slate-900">Restricted Access</h2>
+                                <p className="text-slate-500">Please enter the password to access the pricing calculator.</p>
+                            </div>
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <input 
+                                        type="password" 
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 outline-none"
+                                        placeholder="Password"
+                                    />
+                                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                                </div>
+                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
+                                    Unlock Calculator
+                                </button>
+                                <p className="text-xs text-center text-slate-400 mt-2">Default pass: kd123</p>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="pt-32 pb-24 bg-slate-50 min-h-screen">
+                    <SectionTitle title="Pricing Calculator" subtitle="Internal tool for calculating sheet yield and customer pricing." />
+                    
+                    <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-12 gap-6">
+                        
+                        {/* Inputs */}
+                        <div className="lg:col-span-4 space-y-6 no-print">
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-bold text-lg mb-4 text-blue-700 flex items-center gap-2"><Icon name="truck" className="w-5 h-5"/> Vendor Purchase</h3>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500">Length (mm)</label>
+                                            <input name="vLen" type="number" value={inputs.vLen} onChange={handleInputChange} className="w-full border rounded p-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500">Width (mm)</label>
+                                            <input name="vWid" type="number" value={inputs.vWid} onChange={handleInputChange} className="w-full border rounded p-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500">Total Sheet Cost</label>
+                                        <input name="vCost" type="number" value={inputs.vCost} onChange={handleInputChange} className="w-full border rounded p-2 text-sm" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-bold text-lg mb-4 text-emerald-700 flex items-center gap-2"><Icon name="users" className="w-5 h-5"/> Customer Need</h3>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500">Cut Length (mm)</label>
+                                            <input name="cLen" type="number" value={inputs.cLen} onChange={handleInputChange} className="w-full border rounded p-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-500">Cut Width (mm)</label>
+                                            <input name="cWid" type="number" value={inputs.cWid} onChange={handleInputChange} className="w-full border rounded p-2 text-sm" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500">Blade Thickness (mm)</label>
+                                        <input name="blade" type="number" value={inputs.blade} onChange={handleInputChange} className="w-full border rounded p-2 text-sm bg-slate-50" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-bold text-lg mb-4 text-orange-700 flex items-center gap-2"><Icon name="percent" className="w-5 h-5"/> Overheads (%)</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <label>Labour</label>
+                                        <input name="pLabour" type="number" value={inputs.pLabour} onChange={handleInputChange} className="w-16 border rounded p-1 text-right" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label>Packaging</label>
+                                        <input name="pPack" type="number" value={inputs.pPack} onChange={handleInputChange} className="w-16 border rounded p-1 text-right" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label>Transport</label>
+                                        <input name="pTrans" type="number" value={inputs.pTrans} onChange={handleInputChange} className="w-16 border rounded p-1 text-right" />
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2 border-t mt-2">
+                                        <label className="font-bold text-blue-700">Profit Margin</label>
+                                        <input name="pProfit" type="number" value={inputs.pProfit} onChange={handleInputChange} className="w-16 border-2 border-blue-200 rounded p-1 text-right font-bold" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={calculate} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95">
+                                Calculate Pricing
+                            </button>
+                        </div>
+
+                        {/* Results */}
+                        <div className="lg:col-span-8 space-y-6">
+                             {/* Summary Cards */}
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                    <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
+                                        <Icon name="grid" className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-slate-500">Total Pieces</p>
+                                        <h3 className="text-2xl font-bold">{results ? results.pieces : 0}</h3>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                    <div className="bg-emerald-100 p-3 rounded-full text-emerald-600">
+                                        <Icon name="refresh-cw" className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-slate-500">Efficiency</p>
+                                        <h3 className="text-xl font-bold">{results ? results.efficiency : 0}%</h3>
+                                    </div>
+                                </div>
+                                <div className="bg-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center gap-4">
+                                    <div className="bg-white/20 p-3 rounded-full text-white">
+                                        <Icon name="tag" className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-blue-100">Final Price / Sheet</p>
+                                        <h3 className="text-2xl font-bold">{results ? results.finalPrice : "0.00"}</h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Canvas */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-lg text-slate-700">Layout Visualizer</h3>
+                                    <span className="text-sm bg-slate-100 px-2 py-1 rounded text-slate-600">{results && results.rotated ? "Rotated Orientation" : "Standard Orientation"}</span>
+                                </div>
+                                <div className="w-full overflow-hidden bg-slate-50 border border-slate-300 rounded-lg flex justify-center items-center p-4 h-80">
+                                    <canvas ref={canvasRef}></canvas>
+                                </div>
+                            </div>
+
+                            {/* Table */}
+                            {results && (
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+                                        <h3 className="font-bold text-slate-700">Cost Breakdown Table</h3>
+                                        <button onClick={copyTable} className="text-sm bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-md shadow-sm transition flex items-center gap-2">
+                                            <Icon name="copy" className="w-4 h-4"/> Copy
+                                        </button>
+                                    </div>
+                                    <div className="p-4 overflow-x-auto">
+                                        <table id="quoteTable" className="w-full text-sm text-left border-collapse">
+                                            <tbody>
+                                                <tr className="border-b border-slate-100"><td className="p-3">Required Size</td><td className="p-3 text-right font-medium">{inputs.cLen} x {inputs.cWid} mm</td></tr>
+                                                <tr className="border-b border-slate-100"><td className="p-3">Yield per Sheet</td><td className="p-3 text-right font-medium">{results.pieces} pcs</td></tr>
+                                                <tr className="bg-slate-50 border-b border-slate-100"><td className="p-3 text-slate-500">Base Material Cost</td><td className="p-3 text-right text-slate-500">{results.breakdown.rawCostPerPiece.toFixed(2)}</td></tr>
+                                                <tr className="border-b border-slate-100"><td className="p-3 text-xs pl-6 text-slate-500">+ Labour ({inputs.pLabour}%)</td><td className="p-3 text-right text-xs text-slate-500">{results.breakdown.laborCost.toFixed(2)}</td></tr>
+                                                <tr className="border-b border-slate-100"><td className="p-3 text-xs pl-6 text-slate-500">+ Packaging ({inputs.pPack}%)</td><td className="p-3 text-right text-xs text-slate-500">{results.breakdown.packCost.toFixed(2)}</td></tr>
+                                                <tr className="border-b border-slate-100"><td className="p-3 text-xs pl-6 text-slate-500">+ Transport ({inputs.pTrans}%)</td><td className="p-3 text-right text-xs text-slate-500">{results.breakdown.transCost.toFixed(2)}</td></tr>
+                                                <tr className="border-b border-slate-100 bg-blue-50/50"><td className="p-3 text-xs pl-6 font-semibold text-blue-800">+ Profit ({inputs.pProfit}%)</td><td className="p-3 text-right text-xs font-semibold text-blue-800">{results.breakdown.profitAmt.toFixed(2)}</td></tr>
+                                                <tr className="bg-slate-800 text-white"><td className="p-3 font-bold">Final Rate Per Piece</td><td className="p-3 text-right font-bold text-lg">{results.finalPrice}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // --- Main Sections ---
 
         const Navigation = ({ activeTab, setTab, isMobileMenuOpen, setMobileMenuOpen }) => {
-            const navItems = ["Home", "Products", "About", "Team", "Contact"];
+            const navItems = ["Home", "Products", "About", "Team", "Calculator", "Contact"];
             
             return (
-                <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300">
+                <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300 no-print">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-20 items-center">
                             <a href="#" className="flex items-center text-2xl font-extrabold tracking-tight" onClick={() => setTab('Home')}>
-                                <KDLogo className="w-10 h-10 mr-2 object-contain" />
+                                <KDLogo className="w-10 h-10 mr-2 text-sm" />
                                 <div>
                                     <h1 className="text-2xl font-bold text-slate-900 leading-none tracking-tight">KD Enterprises</h1>
                                     <p className="text-xs text-slate-500 font-medium tracking-widest uppercase">Industrial Solutions</p>
@@ -217,7 +551,7 @@
                             </a>
 
                             {/* Desktop Menu */}
-                            <div className="hidden md:flex space-x-8">
+                            <div className="hidden md:flex space-x-8 items-center">
                                 {navItems.map(item => (
                                     <button
                                         key={item}
@@ -227,12 +561,6 @@
                                         {item.toUpperCase()}
                                     </button>
                                 ))}
-                                <button 
-                                    onClick={() => setTab('Contact')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-semibold text-sm transition-all shadow-md hover:shadow-lg"
-                                >
-                                    Get Quote
-                                </button>
                             </div>
 
                             {/* Mobile Toggle */}
@@ -273,7 +601,6 @@
                             <div className="inline-block bg-blue-600/20 backdrop-blur-sm border border-blue-500/30 rounded-full px-4 py-1.5 mb-6">
                                 <span className="text-blue-100 text-sm font-semibold tracking-wide uppercase">ISO 9001:2015 Certified Supplier</span>
                             </div>
-                            {/* Fixed Typo: bg-white-600 -> bg-white/10 */}
                             <div className="inline-block bg-white/10 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1.5 mb-6 ml-0 sm:ml-3 mt-3 sm:mt-0">
                                 <span className="text-blue-100 text-sm font-semibold tracking-wide uppercase">Make in India</span>
                             </div>
@@ -528,30 +855,13 @@
                                     </div>
 
                                     <div className="mt-12 flex space-x-4">
-                                        {/* WhatsApp */}
-                                        <a 
-                                            href="https://wa.me/919718516548"
-                                            target="_blank"
-                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
-                                        >
+                                        <a href="https://wa.me/919718516548" target="_blank" className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors">
                                             <Icon name="message-circle" className="w-5 h-5" />
                                         </a>
-                                        
-                                        {/* Twitter */}
-                                        <a 
-                                            href="https://x.com/KDEnterprises16"
-                                            target="_blank"
-                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
-                                        >
+                                        <a href="https://x.com/KDEnterprises16" target="_blank" className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors">
                                             <Icon name="twitter" className="w-5 h-5" />
                                         </a>
-                                        
-                                        {/* LinkedIn */}
-                                        <a 
-                                            href="https://www.linkedin.com/company/kd-enterprises-fbd/"
-                                            target="_blank"
-                                            className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors"
-                                        >
+                                        <a href="https://www.linkedin.com/company/kd-enterprises-fbd/" target="_blank" className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center hover:bg-white hover:text-blue-600 transition-colors">
                                             <Icon name="linkedin" className="w-5 h-5" />
                                         </a>
                                     </div>
@@ -562,48 +872,27 @@
                                 <h2 className="text-3xl font-bold text-slate-900 mb-8">Send us a Message</h2>
                             
                                 <form onSubmit={handleSubmit} className="space-y-6">
-                                
+                                    
                                     <div className="grid md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-slate-700">First Name</label>
-                                            <input 
-                                                required 
-                                                type="text" 
-                                                name="first_name"
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
-                                                placeholder="John" 
-                                            />
+                                            <input required type="text" name="first_name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="John" />
                                         </div>
                                         
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-slate-700">Last Name</label>
-                                            <input 
-                                                required 
-                                                type="text" 
-                                                name="last_name"
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
-                                                placeholder="Smith" 
-                                            />
+                                            <input required type="text" name="last_name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="Smith" />
                                         </div>
                                     </div>
                                     
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Email Address</label>
-                                        <input 
-                                            required 
-                                            type="email" 
-                                            name="email"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
-                                            placeholder="john@company.com" 
-                                        />
+                                        <input required type="email" name="email" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="john@company.com" />
                                     </div>
                                     
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Interested In</label>
-                                        <select 
-                                            name="interest"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                                        >
+                                        <select name="interest" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
                                             <option>General Inquiry</option>
                                             <option>Bulk Order Quote</option>
                                             <option>Custom Fabrication</option>
@@ -613,22 +902,10 @@
                                     
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Message</label>
-                                        <textarea 
-                                            required 
-                                            rows="4" 
-                                            name="message"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" 
-                                            placeholder="Tell us about your requirements..."
-                                        ></textarea>
+                                        <textarea required rows="4" name="message" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="Tell us about your requirements..."></textarea>
                                     </div>
                                     
-                                    <button 
-                                        disabled={formStatus === 'sending'}
-                                        type="submit" 
-                                        className={`w-full py-4 rounded-lg font-bold text-white transition-all flex items-center justify-center ${
-                                            formStatus === 'success' ? 'bg-green-600' : 'bg-slate-900 hover:bg-slate-800'
-                                        }`}
-                                    >
+                                    <button disabled={formStatus === 'sending'} type="submit" className={`w-full py-4 rounded-lg font-bold text-white transition-all flex items-center justify-center ${formStatus === 'success' ? 'bg-green-600' : 'bg-slate-900 hover:bg-slate-800'}`}>
                                         {formStatus === 'sending' ? (
                                             <>Processing...</>
                                         ) : formStatus === 'success' ? (
@@ -646,7 +923,7 @@
         };
 
         const Footer = ({ setTab }) => (
-            <footer className="bg-slate-900 text-white pt-16 pb-8 border-t border-slate-800">
+            <footer className="bg-slate-900 text-white pt-16 pb-8 border-t border-slate-800 no-print">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
                         <div>
@@ -724,6 +1001,7 @@
                         {activeTab === 'Products' && <ProductGrid />}
                         {activeTab === 'About' && <AboutUs />}
                         {activeTab === 'Team' && <TeamSection />}
+                        {activeTab === 'Calculator' && <CalculatorSection />}
                         {activeTab === 'Contact' && <ContactSection />}
                     </main>
 
