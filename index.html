@@ -655,6 +655,7 @@
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [password, setPassword] = useState("");
             const [error, setError] = useState("");
+            const [isChecking, setIsChecking] = useState(false);
             const passwordRef = useRef(null);
             const [inputs, setInputs] = useState({
                 product: "Bakelite / Phenolic Sheet",
@@ -683,16 +684,45 @@
 
             const setField = (name, value) => setInputs(prev => ({ ...prev, [name]: value }));
             const handleNumber = (e) => setField(e.target.name, e.target.value === "" ? "" : Number(e.target.value));
-            const handleLogin = (e) => {
+            const hashInput = async (value) => {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(value);
+                const buffer = await crypto.subtle.digest("SHA-256", data);
+                return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+            };
+            const verifyInternalEntry = async (value) => {
+                const digestParts = [
+                    "c4589a15fb278bc8",
+                    "8f8c69ca5c8264a9",
+                    "5fa50b996ed14605",
+                    "80daa0c8437bbb4a"
+                ];
+                return await hashInput(value) === digestParts.join("");
+            };
+            const handleLogin = async (e) => {
                 e.preventDefault();
-                const enteredPassword = (passwordRef.current ? passwordRef.current.value : password).trim();
-                if (enteredPassword === "kd123") {
+                if (isChecking) return;
+                const inputElement = document.getElementById("kd-calc-entry");
+                const enteredPassword = ((inputElement && inputElement.value) || (passwordRef.current && passwordRef.current.value) || password).trim();
+                setIsChecking(true);
+                const isValid = await verifyInternalEntry(enteredPassword);
+                if (isValid) {
+                    sessionStorage.setItem("kd_calc_auth", "true");
                     setIsAuthenticated(true);
                     setError("");
                 } else {
                     setError("Incorrect password");
+                    setTimeout(() => setIsChecking(false), 2000);
+                    return;
                 }
+                setIsChecking(false);
             };
+
+            useEffect(() => {
+                if (sessionStorage.getItem("kd_calc_auth") === "true") {
+                    setIsAuthenticated(true);
+                }
+            }, []);
 
             const handleProductChange = (value) => {
                 const firstSize = MATERIAL_SIZES[value][0];
@@ -898,12 +928,17 @@
                             <div className="bg-blue-50 w-14 h-14 rounded-lg flex items-center justify-center text-blue-700 mb-5"><Icon name="lock" className="w-7 h-7" /></div>
                             <h2 className="text-2xl font-extrabold text-slate-950">KD Internal Pricing Calculator</h2>
                             <p className="text-slate-500 mt-2">For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity.</p>
-                            {/* Client-side password protection only. This is not secure and should not be used for sensitive business data. */}
+                            {/*
+                              NOTE:
+                              This is NOT secure authentication.
+                              This is only to hide internal calculator from general users.
+                              For real security, backend authentication is required.
+                            */}
                             <form onSubmit={handleLogin} className="space-y-4 mt-6">
-                                <input ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
+                                <input id="kd-calc-entry" ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
                                 {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
-                                <button type="button" onClick={handleLogin} className="w-full bg-blue-700 text-white hover:bg-blue-600 border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
-                                    Unlock Calculator <Icon name="lock-open" className="w-4 h-4" />
+                                <button type="button" disabled={isChecking} onClick={handleLogin} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
+                                    {isChecking ? "Checking..." : "Unlock Calculator"} <Icon name="lock-open" className="w-4 h-4" />
                                 </button>
                             </form>
                         </div>
@@ -1140,15 +1175,14 @@
                                 <h2 className="text-3xl font-extrabold mb-5">Share your size, thickness and quantity requirements.</h2>
                                 <p className="text-slate-300 mb-10">Our team can quote sheet supply, custom cutting, drilling, mounting holes, slot cutting and drawing/sample-based components.</p>
                                 <ContactItem icon="message-circle" title="Urgent Enquiries Only" lines={["For urgent enquiries only, message us on WhatsApp: +91 86830 08266"]} />
-                                <ContactItem icon="mail" title="Email" lines={["kd.enterprises2009@yahoo.in", "sales@kd-enterprises.co.in"]} />
-                                <ContactItem icon="map-pin" title="Head Office" lines={["Plot No. B41, Bhagat Singh Colony Ballabgarh,", "Faridabad 121004, Haryana, India"]} />
-                                <div className="grid sm:grid-cols-3 gap-3 mt-8">
+                                <ContactItem icon="mail" title="Email" lines={[
+                                    { text: "kd.enterprises2009@yahoo.in", href: "mailto:kd.enterprises2009@yahoo.in" },
+                                    { text: "sales@kd-enterprises.co.in", href: "mailto:sales@kd-enterprises.co.in" }
+                                ]} />
+                                <ContactItem icon="map-pin" title="Head Office" lines={["St. 3, Plot No. B/41, Ballabgarh,", "Faridabad 121004, Haryana, India"]} />
+                                <div className="grid sm:grid-cols-2 gap-3 mt-8">
                                     <a href="https://wa.me/918683008266" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-3 font-extrabold hover:bg-emerald-500 transition">
                                         <BrandIcon brand="whatsapp" /> WhatsApp
-                                    </a>
-                                    {/* Replace this X link here if the official profile changes. */}
-                                    <a href="https://x.com/KDEnterprises16" target="_blank" rel="noopener noreferrer" aria-label="KD Enterprises on X" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-slate-800 px-4 py-3 font-extrabold hover:bg-slate-700 transition border border-white/10">
-                                        <BrandIcon brand="x" /> X
                                     </a>
                                     {/* Replace this LinkedIn link here if the official profile changes. */}
                                     <a href="https://www.linkedin.com/company/kd-enterprises-fbd/" target="_blank" rel="noopener noreferrer" aria-label="KD Enterprises on LinkedIn" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-blue-700 px-4 py-3 font-extrabold hover:bg-blue-600 transition">
@@ -1195,7 +1229,14 @@
                 <div className="bg-blue-700 p-3 rounded-md"><Icon name={icon} className="w-5 h-5" /></div>
                 <div>
                     <h4 className="font-extrabold">{title}</h4>
-                    {lines.map(line => <p key={line} className="text-slate-300 text-sm mt-1">{line}</p>)}
+                    {lines.map(line => {
+                        const value = typeof line === "string" ? { text: line } : line;
+                        return value.href ? (
+                            <a key={value.text} href={value.href} className="block text-slate-300 hover:text-white text-sm mt-1 underline-offset-4 hover:underline">{value.text}</a>
+                        ) : (
+                            <p key={value.text} className="text-slate-300 text-sm mt-1">{value.text}</p>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -1229,9 +1270,8 @@
                             </ul>
                         </div>
                     </div>
-                    <div className="border-t border-slate-800 pt-6 text-sm text-slate-500 flex flex-col md:flex-row justify-between gap-3">
+                    <div className="border-t border-slate-800 pt-6 text-sm text-slate-500">
                         <p>&copy; 2026 KD Enterprises. All rights reserved.</p>
-                        <p>Static website deployed on Vercel</p>
                     </div>
                 </div>
             </footer>
