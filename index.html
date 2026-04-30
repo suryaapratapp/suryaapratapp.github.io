@@ -18,6 +18,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- jsPDF for internal calculator PDF export -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -53,7 +56,18 @@
     <script type="text/babel">
         const { useEffect, useMemo, useRef, useState } = React;
 
-        const SERVICE_LIST = ["Cut to size", "Drilling", "Mounting", "Corner cutting", "Finishing"];
+        const CUSTOMISATION_LIST = [
+            "Cut to size",
+            "Drilling",
+            "Mounting holes",
+            "Corner cutting",
+            "Slot cutting",
+            "Shape/custom cut-outs",
+            "Counter sinking / counter boring where applicable",
+            "Edge trimming",
+            "Basic deburring after cutting/drilling",
+            "Marking as per drawing/sample"
+        ];
 
         const PRODUCTS = [
             {
@@ -61,8 +75,8 @@
                 title: "Acrylic Products",
                 category: "Acrylic",
                 material: "Acrylic Sheet / Acrylic Pipe",
-                desc: "Clear, presentable and weather-resistant acrylic materials for guards, displays and transparent covers.",
-                applications: ["Display panels", "Machine guards", "Transparent covers", "Signage", "Protective screens"],
+                desc: "Clear, weather-resistant acrylic sheets for guards, covers, displays and fabrication panels.",
+                applications: ["Machine guards", "Transparent covers", "Display panels", "Signage", "Protective screens", "Fabrication panels"],
                 properties: ["Optical clarity", "Lightweight", "Weather resistant", "Easy to fabricate"],
                 industries: ["Display/signage", "Manufacturing", "Custom components"],
                 img: "products/acrylic pipe.png",
@@ -73,8 +87,8 @@
                 title: "Nylon Products",
                 category: "Nylon",
                 material: "Nylon Rod / Cast Nylon Rod",
-                desc: "Durable engineering plastic rods for wear-resistant, low-noise mechanical parts.",
-                applications: ["Bushes", "Spacers", "Rollers", "Industrial blocks", "Mechanical support parts"],
+                desc: "Durable nylon stock for wear-resistant machined and cut mechanical components.",
+                applications: ["Bushes", "Spacers", "Wear pads", "Rollers", "Industrial blocks", "Mechanical support parts"],
                 properties: ["Wear resistant", "High load capacity", "Low friction", "Machinable"],
                 industries: ["Manufacturing", "Machine parts", "Custom components"],
                 img: "products/nylon rod (1).png",
@@ -85,8 +99,8 @@
                 title: "Industrial Rods & Sheets",
                 category: "Engineering Plastics",
                 material: "Polycarbonate / Delrin / PU",
-                desc: "Mixed industrial plastic stock for safety guards, precision spares and high-performance fixtures.",
-                applications: ["Machine guards", "Precision cut parts", "Industrial fixtures", "Safety covers"],
+                desc: "Industrial plastic stock for machine guards, support parts, fixtures and drawing-based components.",
+                applications: ["Machine guards", "Precision cut parts", "Industrial fixtures", "Support blocks", "Custom engineering parts"],
                 properties: ["Impact strength", "Dimensional stability", "Custom machinable", "Industrial grade"],
                 industries: ["Manufacturing", "Machine parts", "Custom components"],
                 img: "products/industrial sheets.png",
@@ -98,7 +112,7 @@
                 category: "Glass Epoxy",
                 material: "FR4 / G10 Epoxy Sheet",
                 desc: "High-strength electrical insulation laminate for switchgear, transformer and electronics applications.",
-                applications: ["High-strength electrical insulation", "PCB/electronics support", "Terminal boards", "Switchgear and transformer parts", "Precision cut industrial components"],
+                applications: ["High-strength electrical insulation", "Switchgear parts", "Transformer parts", "Terminal boards", "Precision cut electrical components", "Electronics support structures"],
                 properties: ["High dielectric strength", "Rigid", "Heat resistant", "Moisture resistant"],
                 industries: ["Electrical", "Manufacturing", "Custom components"],
                 img: "products/glass epoxy (1).png",
@@ -122,7 +136,7 @@
                 category: "Acrylic",
                 material: "Cast / MOP Acrylic Sheet",
                 desc: "Premium acrylic sheets for visual, protective and fabricated panel requirements.",
-                applications: ["Display panels", "Machine guards", "Transparent covers", "Signage", "Protective screens"],
+                applications: ["Machine guards", "Transparent covers", "Display panels", "Signage", "Protective screens", "Fabrication panels"],
                 properties: ["Clear finish", "Polishable edges", "Lightweight", "Easy cutting"],
                 industries: ["Display/signage", "Manufacturing", "Custom components"],
                 img: "products/acrylic sheet.png",
@@ -145,8 +159,8 @@
                 title: "FRP Sheets",
                 category: "FRP",
                 material: "Fiberglass Reinforced Plastic Sheet",
-                desc: "Lightweight corrosion-resistant sheet for covers, panels and electrical insulation use.",
-                applications: ["Corrosion-resistant panels", "Electrical insulation", "Industrial covers", "Chemical area panels", "Lightweight machine parts"],
+                desc: "Lightweight corrosion-resistant sheets for utility panels, covers and insulation applications.",
+                applications: ["Corrosion-resistant panels", "Electrical insulation", "Industrial covers", "Chemical area panels", "Lightweight machine parts", "Utility panels"],
                 properties: ["Corrosion resistant", "Lightweight", "Insulating", "Weather tolerant"],
                 industries: ["Electrical", "Manufacturing", "Custom components"],
                 img: "products/frp.png",
@@ -158,7 +172,7 @@
                 category: "Delrin",
                 material: "Acetal Engineering Plastic",
                 desc: "Precision engineering plastic for low-friction, dimensionally stable machined parts.",
-                applications: ["Precision machined parts", "Gears", "Bushes", "Low-friction components", "Engineering plastic parts"],
+                applications: ["Precision engineering parts", "Low-friction components", "Gears", "Bushes", "Support blocks", "Machined plastic components"],
                 properties: ["Low friction", "High stiffness", "Dimensional stability", "Excellent machinability"],
                 industries: ["Manufacturing", "Machine parts", "Custom components"],
                 img: "products/delrin sheet.png",
@@ -168,10 +182,10 @@
                 id: 10,
                 title: "Custom Plastic Components",
                 category: "Custom Components",
-                material: "Cut, drilled and finished industrial plastic parts",
-                desc: "Made-to-order industrial components processed from Bakelite, FRP, epoxy, acrylic, nylon and Delrin.",
-                applications: ["Industrial plastic cut components", "Mounting plates", "Corner cut parts", "Control panel parts", "Custom cut-out work"],
-                properties: ["Made to drawing", "Batch supply", "Clean finishing", "Packed for dispatch"],
+                material: "Cut, drilled and drawing-based industrial plastic parts",
+                desc: "Made-to-order components processed from Bakelite, FRP, epoxy, acrylic, nylon and Delrin as per drawing, sample or size.",
+                applications: ["Industrial plastic cut components", "Mounting plates", "Corner cut parts", "Control panel parts", "Custom cut-out work", "Sample-based parts"],
+                properties: ["Made to drawing", "Sample-based support", "Batch-wise supply", "Deburred after cutting/drilling"],
                 industries: ["Solar", "Electrical", "Manufacturing", "Machine parts", "Custom components"],
                 img: "products/other-components.png",
                 icon: "wrench"
@@ -195,11 +209,9 @@
 
         const PRODUCT_FILTERS = ["All", "Bakelite", "FRP", "Glass Epoxy", "Acrylic", "Nylon", "Delrin", "Engineering Plastics", "Custom Components"];
         const INDUSTRY_FILTERS = ["All", "Solar", "Electrical", "Manufacturing", "Machine parts", "Display/signage", "Custom components"];
-        const USE_CASES = [
-            "Solar mounting plates", "Electrical panels", "Transformer insulation", "Switchgear components", "Machine guards",
-            "Control panels", "Industrial fixtures", "Automotive/electrical insulation", "Custom engineering plastic parts"
-        ];
-        const TRUST_BADGES = ["Custom cutting", "Drilling & mounting", "Industrial grade materials", "Bulk supply", "Pan-India dispatch", "Made-to-order components"];
+        const SUPPLY_ITEMS = ["Sheets", "Cut-to-size parts", "Drilled components", "Mounting plates", "Electrical insulation parts", "Solar/industrial application components"];
+        const INDUSTRIES_SERVED = ["Electrical panels", "Solar mounting assemblies", "Transformer and switchgear manufacturers", "Manufacturing units", "Machine builders", "Industrial maintenance teams", "Signage/display fabricators", "Custom engineering workshops"];
+        const WHY_CHOOSE = ["Drawing/sample-based supply", "Custom cutting and drilling", "Industrial material knowledge", "Batch-wise supply", "Practical support for manufacturing requirements", "Reliable enquiry and quotation process"];
 
         const Icon = ({ name, className = "" }) => <i data-lucide={name} className={className}></i>;
 
@@ -244,6 +256,7 @@
 
         const Navigation = ({ activeTab, setTab, isMobileMenuOpen, setMobileMenuOpen }) => {
             const navItems = ["Home", "Products", "About", "Team", "Calculator", "Contact"];
+            const navLabel = (item) => item === "Calculator" ? "Internal Calculator" : item;
             return (
                 <nav className="fixed w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm no-print">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -258,7 +271,7 @@
                             <div className="hidden md:flex gap-7 items-center">
                                 {navItems.map(item => (
                                     <button key={item} onClick={() => setTab(item)} className={`text-sm font-extrabold transition ${activeTab === item ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>
-                                        {item}
+                                        {navLabel(item)}
                                     </button>
                                 ))}
                             </div>
@@ -272,7 +285,7 @@
                             <div className="px-4 py-4 space-y-1">
                                 {navItems.map(item => (
                                     <button key={item} onClick={() => { setTab(item); setMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-3 rounded-md font-bold ${activeTab === item ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
-                                        {item}
+                                        {navLabel(item)}
                                     </button>
                                 ))}
                             </div>
@@ -289,26 +302,25 @@
                         <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
                             <div>
                                 <div className="flex flex-wrap gap-3 mb-7">
-                                    <span className="bg-white/10 border border-white/20 text-blue-100 px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">Industrial grade materials</span>
-                                    <span className="bg-white/10 border border-white/20 text-blue-100 px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">Cutting & fabrication</span>
+                                    <span className="bg-white/10 border border-white/20 text-blue-100 px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">Drawing/sample-based supply</span>
+                                    <span className="bg-white/10 border border-white/20 text-blue-100 px-3 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider">Industrial plastic components</span>
                                 </div>
                                 <h2 className="text-4xl md:text-6xl font-extrabold text-white leading-tight tracking-tight">
                                     Industrial Plastic Sheets & Custom Cut Components
                                 </h2>
                                 <p className="text-lg md:text-xl text-slate-300 mt-6 max-w-2xl leading-relaxed">
-                                    KD Enterprises supplies Bakelite, FRP, glass epoxy, acrylic, nylon, Delrin and processed plastic parts for electrical, solar, manufacturing and machine-building requirements.
+                                    Bakelite, FRP, Glass Epoxy, Acrylic, Nylon and Delrin components supplied as per drawing, sample or size requirement.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3 mt-9">
                                     <PrimaryButton onClick={() => setTab("Products")} variant="light">View Products</PrimaryButton>
                                     <PrimaryButton onClick={() => setTab("Contact")} icon="send">Request Quote</PrimaryButton>
-                                    <PrimaryButton onClick={() => setTab("Calculator")} variant="outline" icon="calculator">Open Calculator</PrimaryButton>
                                 </div>
                             </div>
                             <div className="bg-white/10 border border-white/15 backdrop-blur rounded-xl p-5 md:p-7">
                                 <div className="grid grid-cols-2 gap-3">
-                                    {TRUST_BADGES.map((badge, index) => (
+                                    {WHY_CHOOSE.map((badge, index) => (
                                         <div key={badge} className="bg-white/10 border border-white/10 rounded-lg p-4">
-                                            <Icon name={["ruler", "drill", "shield-check", "boxes", "truck", "settings"][index]} className="w-5 h-5 text-blue-200 mb-3" />
+                                            <Icon name={["file-check-2", "circle-dot", "badge-check", "layers", "settings", "send"][index]} className="w-5 h-5 text-blue-200 mb-3" />
                                             <p className="text-white font-extrabold text-sm">{badge}</p>
                                         </div>
                                     ))}
@@ -320,12 +332,40 @@
 
                 <section className="py-20 bg-white industrial-grid">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <SectionTitle eyebrow="Applications" title="Built for Industrial Use Cases" subtitle="From insulation boards to machined support parts, we help customers source and process materials ready for shop-floor use." />
+                        <SectionTitle eyebrow="What We Supply" title="Sheets, Cut Parts & Drawing-Based Components" subtitle="We supply raw sheets and prepared components for practical industrial, electrical, solar and manufacturing requirements." />
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {USE_CASES.map((item) => (
+                            {SUPPLY_ITEMS.map((item) => (
                                 <div key={item} className="bg-white border border-slate-200 rounded-lg p-5 flex items-start gap-3 card-rise">
                                     <div className="bg-blue-50 text-blue-700 p-2 rounded-md"><Icon name="check-circle-2" className="w-5 h-5" /></div>
                                     <p className="font-extrabold text-slate-800">{item}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="py-20 bg-slate-100">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <SectionTitle eyebrow="Industries" title="Industries We Serve" subtitle="KD Enterprises supports recurring industrial requirements as well as drawing-based custom enquiries." />
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {INDUSTRIES_SERVED.map((item, index) => (
+                                <div key={item} className="bg-white border border-slate-200 rounded-lg p-5 card-rise">
+                                    <Icon name={["box", "sun", "zap", "factory", "settings", "wrench", "monitor", "pen-tool"][index]} className="w-6 h-6 text-blue-700 mb-4" />
+                                    <p className="font-extrabold text-slate-900">{item}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="py-20 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <SectionTitle eyebrow="Why KD" title="Why Choose KD Enterprises" subtitle="A practical sourcing partner for industrial plastic material selection, cutting, drilling and batch-wise supply." />
+                        <div className="grid md:grid-cols-3 gap-5">
+                            {WHY_CHOOSE.map((item) => (
+                                <div key={item} className="border border-slate-200 rounded-xl p-6 bg-slate-50">
+                                    <Icon name="badge-check" className="w-6 h-6 text-blue-700 mb-4" />
+                                    <p className="font-extrabold text-slate-950">{item}</p>
                                 </div>
                             ))}
                         </div>
@@ -371,7 +411,7 @@
                                 <p className="text-slate-600 mt-3 leading-relaxed">{product.desc}</p>
                                 <DetailGroup title="Common Applications" items={product.applications} />
                                 <DetailGroup title="Key Properties" items={product.properties} />
-                                <DetailGroup title="Available Services" items={SERVICE_LIST} />
+                                <DetailGroup title="Available Customisation" items={CUSTOMISATION_LIST} />
                                 <PrimaryButton onClick={() => onQuote(product)} icon="send" className="w-full mt-6">Request Quote</PrimaryButton>
                             </div>
                         </div>
@@ -441,7 +481,7 @@
                                         <p className="text-slate-600 text-sm leading-relaxed mt-4">{product.desc}</p>
                                         <DetailGroup title="Use Cases" items={product.applications.slice(0, 4)} />
                                         <DetailGroup title="Properties" items={product.properties.slice(0, 4)} />
-                                        <DetailGroup title="Services" items={SERVICE_LIST} />
+                                        <DetailGroup title="Available Customisation" items={CUSTOMISATION_LIST} />
                                         <div className="grid grid-cols-2 gap-3 mt-auto pt-6">
                                             <PrimaryButton onClick={() => onQuote(product)} icon="send" className="w-full px-3">Request Quote</PrimaryButton>
                                             <PrimaryButton onClick={() => setSelectedProduct(product)} variant="outline" icon="list" className="w-full px-3">View Details</PrimaryButton>
@@ -480,6 +520,7 @@
                 thickness: 3,
                 cLen: 300,
                 cWid: 200,
+                pieceThickness: 3,
                 blade: 3,
                 rawPrice: 5000,
                 processingType: "fixed",
@@ -610,12 +651,21 @@
                     costBeforeProfit,
                     profitAmount,
                     finalSellingPrice,
+                    profitPercent: Number(inputs.profit || 0),
+                    quantity,
                     totalOrderValue: quantity > 0 ? finalSellingPrice * quantity : null,
+                    rawSizeLabel: selectedSize.custom ? "Custom size" : selectedSize.label,
                     layout: best
                 };
                 setResults(nextResults);
                 setTimeout(() => drawDiagram(vLen, vWid, best.fitL, best.fitW, best.cols, best.rows, gap), 80);
             };
+
+            useEffect(() => {
+                if (!isAuthenticated) return;
+                const timer = setTimeout(() => calculate(), 150);
+                return () => clearTimeout(timer);
+            }, [isAuthenticated]);
 
             const copyTable = () => {
                 const table = document.getElementById("quoteTable");
@@ -629,13 +679,81 @@
                 alert("Pricing table copied.");
             };
 
+            const resultRows = () => {
+                if (!results) return [];
+                return [
+                    ["Selected product", inputs.product],
+                    ["Raw sheet size", `${inputs.vLen} x ${inputs.vWid} x ${inputs.thickness} mm (${results.rawSizeLabel})`],
+                    ["Required cut size", `${inputs.cLen} x ${inputs.cWid} x ${inputs.pieceThickness} mm`],
+                    ["Best orientation", results.orientation],
+                    ["Pieces per raw sheet", `${results.pieces}`],
+                    ["Wastage percentage", `${results.wastage.toFixed(1)}%`],
+                    ["Material cost per piece", `INR ${money(results.materialPerPiece)}`],
+                    ["Processing cost per piece", `INR ${money(results.processingPerPiece)}`],
+                    ["Packaging & forwarding cost per piece", `INR ${money(results.packagingPerPiece)}`],
+                    ["Total cost before profit", `INR ${money(results.costBeforeProfit)}`],
+                    ["Profit percentage", `${results.profitPercent}%`],
+                    ["Profit amount", `INR ${money(results.profitAmount)}`],
+                    ["Final selling price per piece", `INR ${money(results.finalSellingPrice)}`],
+                    ["Quantity", results.quantity ? `${results.quantity} pcs` : "-"],
+                    ["Total order value", results.totalOrderValue ? `INR ${money(results.totalOrderValue)}` : "-"]
+                ];
+            };
+
+            const downloadCSV = () => {
+                if (!results) return;
+                const rows = [["KD Enterprises Internal Pricing Summary", ""], ["Date", new Date().toLocaleDateString()], ...resultRows(), ["Disclaimer", "Internal estimate only. Not a final customer quotation."]];
+                const csv = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `kd-internal-pricing-${Date.now()}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            };
+
+            const downloadPDF = () => {
+                if (!results || !window.jspdf) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                let y = 18;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(18);
+                doc.text("KD Enterprises", 14, y);
+                y += 8;
+                doc.setFontSize(12);
+                doc.text("Internal Pricing Summary", 14, y);
+                y += 8;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, y);
+                y += 10;
+                resultRows().forEach(([label, value]) => {
+                    if (y > 275) {
+                        doc.addPage();
+                        y = 18;
+                    }
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${label}:`, 14, y);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(String(value), 78, y);
+                    y += 8;
+                });
+                y += 6;
+                doc.setFont("helvetica", "bold");
+                doc.text("Disclaimer:", 14, y);
+                doc.setFont("helvetica", "normal");
+                doc.text("Internal estimate only. Not a final customer quotation.", 42, y);
+                doc.save(`kd-internal-pricing-${Date.now()}.pdf`);
+            };
+
             if (!isAuthenticated) {
                 return (
                     <div className="pt-32 pb-24 min-h-screen bg-slate-100 flex items-center justify-center px-4">
                         <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full border border-slate-200">
                             <div className="bg-blue-50 w-14 h-14 rounded-lg flex items-center justify-center text-blue-700 mb-5"><Icon name="lock" className="w-7 h-7" /></div>
-                            <h2 className="text-2xl font-extrabold text-slate-950">Pricing Calculator</h2>
-                            <p className="text-slate-500 mt-2">Internal calculator for sheet yield, processing cost and selling price.</p>
+                            <h2 className="text-2xl font-extrabold text-slate-950">KD Internal Pricing Calculator</h2>
+                            <p className="text-slate-500 mt-2">For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity.</p>
                             {/* Client-side password protection only. This is not secure and should not be used for sensitive business data. */}
                             <form onSubmit={handleLogin} className="space-y-4 mt-6">
                                 <input ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
@@ -653,7 +771,7 @@
 
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen">
-                    <SectionTitle eyebrow="Internal Tool" title="Sheet Yield & Pricing Calculator" subtitle="Select material, raw sheet size, cut size and cost structure to calculate professional quote pricing." />
+                    <SectionTitle eyebrow="KD Internal Team Only" title="KD Internal Pricing Calculator" subtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity." />
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-6">
                         <div className="lg:col-span-4 space-y-5 no-print">
                             <CalcStep number="1" title="Select Material">
@@ -665,7 +783,7 @@
                                 </label>
                             </CalcStep>
 
-                            <CalcStep number="2" title="Raw Sheet & Cut Size">
+                            <CalcStep number="2" title="Raw Material / Sheet Details">
                                 <label className="block">
                                     <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Raw Sheet Size</span>
                                     <select value={inputs.rawSizeIndex} onChange={(e) => handleRawSizeChange(e.target.value)} className="mt-1 w-full px-3 py-3 rounded-md border border-slate-200 bg-white outline-none focus:border-blue-500">
@@ -675,23 +793,27 @@
                                 <div className="grid grid-cols-2 gap-3 mt-3">
                                     <NumberInput label="Raw Length" name="vLen" value={inputs.vLen} onChange={handleNumber} suffix="mm" />
                                     <NumberInput label="Raw Width" name="vWid" value={inputs.vWid} onChange={handleNumber} suffix="mm" />
-                                    <NumberInput label="Cut Length" name="cLen" value={inputs.cLen} onChange={handleNumber} suffix="mm" />
-                                    <NumberInput label="Cut Width" name="cWid" value={inputs.cWid} onChange={handleNumber} suffix="mm" />
-                                    <NumberInput label="Thickness" name="thickness" value={inputs.thickness} onChange={handleNumber} suffix="mm" />
-                                    <NumberInput label="Blade Gap" name="blade" value={inputs.blade} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Raw Thickness" name="thickness" value={inputs.thickness} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Raw Sheet Price" name="rawPrice" value={inputs.rawPrice} onChange={handleNumber} suffix="INR" />
                                 </div>
                                 {!isCustomSize && <p className="text-xs text-slate-500 mt-3">Length and width are prefilled from the selected raw sheet size. You can still adjust them if needed.</p>}
                             </CalcStep>
 
-                            <CalcStep number="3" title="Costs & Margin">
+                            <CalcStep number="3" title="Required Cut Size Details">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <NumberInput label="Piece Length" name="cLen" value={inputs.cLen} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Piece Width" name="cWid" value={inputs.cWid} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Piece Thickness" name="pieceThickness" value={inputs.pieceThickness} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Quantity Required" name="quantity" value={inputs.quantity} onChange={handleNumber} suffix="pcs" />
+                                    <NumberInput label="Blade Gap" name="blade" value={inputs.blade} onChange={handleNumber} suffix="mm" />
+                                </div>
+                            </CalcStep>
+
+                            <CalcStep number="4" title="Cost & Margin Details">
                                 <div className="space-y-3">
-                                    <NumberInput label="Raw Sheet Price" name="rawPrice" value={inputs.rawPrice} onChange={handleNumber} suffix="INR" />
                                     <CostInput label="Processing Cost" type={inputs.processingType} typeName="processingType" valueName="processingCost" value={inputs.processingCost} setField={setField} handleNumber={handleNumber} />
                                     <CostInput label="Packaging & Forwarding" type={inputs.packagingType} typeName="packagingType" valueName="packagingCost" value={inputs.packagingCost} setField={setField} handleNumber={handleNumber} />
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <NumberInput label="Profit" name="profit" value={inputs.profit} onChange={handleNumber} suffix="%" />
-                                        <NumberInput label="Quantity" name="quantity" value={inputs.quantity} onChange={handleNumber} suffix="pcs" />
-                                    </div>
+                                    <NumberInput label="Profit" name="profit" value={inputs.profit} onChange={handleNumber} suffix="%" />
                                 </div>
                             </CalcStep>
 
@@ -701,13 +823,19 @@
                         </div>
 
                         <div className="lg:col-span-8 space-y-6">
-                            <CalcStep number="4" title="Final Pricing">
+                            <CalcStep number="5" title="Final Pricing">
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <Metric label="Best Orientation" value={results ? results.orientation : "-"} />
                                     <Metric label="Pieces / Sheet" value={results ? results.pieces : "0"} />
                                     <Metric label="Wastage" value={results ? `${results.wastage.toFixed(1)}%` : "0%"} />
                                     <Metric label="Final / Piece" value={results ? `INR ${money(results.finalSellingPrice)}` : "INR 0.00"} highlight />
                                 </div>
+                                {results && (
+                                    <div className="flex flex-col sm:flex-row gap-3 mt-5 no-print">
+                                        <PrimaryButton onClick={downloadCSV} icon="download" variant="outline">Download CSV</PrimaryButton>
+                                        <PrimaryButton onClick={downloadPDF} icon="file-down">Download PDF</PrimaryButton>
+                                    </div>
+                                )}
                             </CalcStep>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -737,14 +865,18 @@
                                             <tbody>
                                                 <PriceRow label="Product" value={inputs.product} />
                                                 <PriceRow label="Raw Sheet" value={`${inputs.vLen} x ${inputs.vWid} x ${inputs.thickness} mm`} />
-                                                <PriceRow label="Required Cut Size" value={`${inputs.cLen} x ${inputs.cWid} mm`} />
+                                                <PriceRow label="Required Cut Size" value={`${inputs.cLen} x ${inputs.cWid} x ${inputs.pieceThickness} mm`} />
+                                                <PriceRow label="Best Orientation" value={results.orientation} />
                                                 <PriceRow label="Pieces per Raw Sheet" value={`${results.pieces} pcs`} />
+                                                <PriceRow label="Wastage Percentage" value={`${results.wastage.toFixed(1)}%`} />
                                                 <PriceRow label="Material Cost / Piece" value={`INR ${money(results.materialPerPiece)}`} />
                                                 <PriceRow label="Processing Cost / Piece" value={`INR ${money(results.processingPerPiece)}`} />
                                                 <PriceRow label="Packaging & Forwarding / Piece" value={`INR ${money(results.packagingPerPiece)}`} />
                                                 <PriceRow label="Total Before Profit" value={`INR ${money(results.costBeforeProfit)}`} />
+                                                <PriceRow label="Profit Percentage" value={`${results.profitPercent}%`} />
                                                 <PriceRow label="Profit Amount" value={`INR ${money(results.profitAmount)}`} />
                                                 <tr className="bg-slate-900 text-white"><td className="p-3 font-extrabold">Final Selling Price / Piece</td><td className="p-3 text-right font-extrabold text-lg">INR {money(results.finalSellingPrice)}</td></tr>
+                                                <PriceRow label="Quantity" value={results.quantity ? `${results.quantity} pcs` : "-"} />
                                                 {results.totalOrderValue && <tr className="bg-blue-700 text-white"><td className="p-3 font-extrabold">Total Order Value</td><td className="p-3 text-right font-extrabold text-lg">INR {money(results.totalOrderValue)}</td></tr>}
                                             </tbody>
                                         </table>
@@ -801,7 +933,7 @@
                         <img src="products/warehouse.png" alt="KD Enterprises warehouse" className="rounded-xl shadow-2xl w-full border border-slate-200" />
                     </div>
                     <div>
-                        <SectionTitle align="left" eyebrow="About KD Enterprises" title="Supply, Processing & Dispatch for Industrial Plastic Materials" subtitle="We help industrial buyers source the right sheet, rod or processed plastic component with practical services like cutting, drilling, mounting, cleaning, packaging and forwarding." />
+                        <SectionTitle align="left" eyebrow="About KD Enterprises" title="Supply & Processing for Industrial Plastic Materials" subtitle="We help industrial buyers source the right sheet, rod or processed plastic component with practical support for cutting, drilling, mounting holes, slot cutting and drawing/sample-based requirements." />
                         <div className="grid sm:grid-cols-2 gap-4">
                             {["Electrical insulation", "Solar mounting plates", "Manufacturing spares", "Custom cut components"].map(item => (
                                 <div key={item} className="border-l-4 border-blue-700 bg-slate-50 p-4 rounded-r-lg">
@@ -862,12 +994,14 @@
                             <div className="bg-slate-950 text-white p-8 md:p-12">
                                 <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-blue-300 mb-4">Request Quote</p>
                                 <h2 className="text-3xl font-extrabold mb-5">Share your size, thickness and quantity requirements.</h2>
-                                <p className="text-slate-300 mb-10">Our team can quote sheet supply, custom cutting, drilling, mounting, finishing, packaging and forwarding.</p>
-                                <ContactItem icon="phone" title="Phone" lines={["+91 9899518970", "+91 9718516548"]} />
+                                <p className="text-slate-300 mb-10">Our team can quote sheet supply, custom cutting, drilling, mounting holes, slot cutting and drawing/sample-based components.</p>
+                                <ContactItem icon="message-circle" title="Urgent Enquiries Only" lines={["Message us on WhatsApp:", "+91 86830 08266"]} />
                                 <ContactItem icon="mail" title="Email" lines={["kd.enterprises2009@yahoo.in", "sales@kd-enterprises.co.in"]} />
                                 <ContactItem icon="map-pin" title="Head Office" lines={["Plot No. B41, Bhagat Singh Colony Ballabgarh,", "Faridabad 121004, Haryana, India"]} />
                                 <div className="flex gap-3 mt-8">
-                                    <a href="https://wa.me/919718516548" target="_blank" className="w-10 h-10 rounded-md bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition"><Icon name="message-circle" className="w-5 h-5" /></a>
+                                    <a href="https://wa.me/918683008266" target="_blank" className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-4 py-3 font-extrabold hover:bg-blue-600 transition">
+                                        <Icon name="message-circle" className="w-5 h-5" /> WhatsApp
+                                    </a>
                                     <a href="https://x.com/KDEnterprises16" target="_blank" className="w-10 h-10 rounded-md bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition"><Icon name="twitter" className="w-5 h-5" /></a>
                                     <a href="https://www.linkedin.com/company/kd-enterprises-fbd/" target="_blank" className="w-10 h-10 rounded-md bg-blue-700 flex items-center justify-center hover:bg-blue-600 transition"><Icon name="linkedin" className="w-5 h-5" /></a>
                                 </div>
@@ -941,13 +1075,13 @@
                         <div>
                             <h4 className="font-extrabold mb-4">Services</h4>
                             <ul className="space-y-2 text-sm text-slate-400">
-                                <li>Cutting, drilling, mounting</li><li>Corner cutting & cut-outs</li><li>Cleaning and finishing</li><li>Packaging and forwarding</li>
+                                <li>Cutting, drilling, mounting holes</li><li>Corner, slot and shape cutting</li><li>Basic deburring after cutting/drilling</li><li>Drawing/sample-based supply</li>
                             </ul>
                         </div>
                     </div>
                     <div className="border-t border-slate-800 pt-6 text-sm text-slate-500 flex flex-col md:flex-row justify-between gap-3">
                         <p>&copy; 2026 KD Enterprises. All rights reserved.</p>
-                        <p>GitHub Pages static website</p>
+                        <p>Static website deployed on Vercel</p>
                     </div>
                 </div>
             </footer>
@@ -957,7 +1091,7 @@
             <div>
                 <h4 className="font-extrabold mb-4">{title}</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                    {items.map(item => <li key={item}><button onClick={() => setTab(item)} className="hover:text-white transition">{item}</button></li>)}
+                    {items.map(item => <li key={item}><button onClick={() => setTab(item)} className="hover:text-white transition">{item === "Calculator" ? "Internal Calculator" : item}</button></li>)}
                 </ul>
             </div>
         );
@@ -971,7 +1105,7 @@
             useEffect(() => { window.scrollTo(0, 0); }, [activeTab]);
 
             const requestQuote = (product) => {
-                setQuoteMessage(`I am interested in ${product.title} custom cut components. Please share quotation details.`);
+                setQuoteMessage(`I am interested in ${product.title}. Please share quotation details for custom size/cut requirements.`);
                 setTab("Contact");
             };
 
