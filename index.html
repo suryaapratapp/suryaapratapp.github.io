@@ -950,35 +950,26 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 const pageWidth = doc.internal.pageSize.getWidth();
+                const margin = 14;
+                const contentWidth = pageWidth - (margin * 2);
+                const labelWidth = 45;
+                const valueX = margin + labelWidth + 3;
+                const valueWidth = pageWidth - valueX - margin;
                 const canvas = canvasRef.current;
                 const layoutImage = canvas ? canvas.toDataURL("image/png") : null;
-                const logoImage = document.querySelector('img[alt="KD Enterprises logo"]');
-                let logoData = null;
-                if (logoImage && logoImage.complete) {
-                    const logoCanvas = document.createElement("canvas");
-                    logoCanvas.width = 80;
-                    logoCanvas.height = 72;
-                    const logoCtx = logoCanvas.getContext("2d");
-                    logoCtx.clearRect(0, 0, logoCanvas.width, logoCanvas.height);
-                    logoCtx.drawImage(logoImage, 0, 0, logoCanvas.width, logoCanvas.height);
-                    logoData = logoCanvas.toDataURL("image/png");
-                }
                 let y = 12;
-                if (logoData) {
-                    doc.addImage(logoData, "PNG", 14, 8, 16, 14);
-                }
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(16);
-                doc.text("KD Enterprises", logoData ? 34 : 14, y);
+                doc.text("KD Enterprises", margin, y);
                 doc.setFontSize(10);
-                doc.text("Internal Pricing Summary", pageWidth - 14, y, { align: "right" });
+                doc.text("Internal Pricing Summary", pageWidth - margin, y, { align: "right" });
                 y += 6;
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(8);
-                doc.text("St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India", 14, y);
-                doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 14, y, { align: "right" });
-                y += 5;
-                doc.text("kd.enterprises2009@yahoo.in | sales@kd-enterprises.co.in", 14, y);
+                doc.text(doc.splitTextToSize("St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India", contentWidth - 38), margin, y);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin, y, { align: "right" });
+                y += 8;
+                doc.text(doc.splitTextToSize("kd.enterprises2009@yahoo.in | sales@kd-enterprises.co.in", contentWidth), margin, y);
                 y += 7;
 
                 const pdfRows = [
@@ -993,19 +984,22 @@
                     ["Total order value", results.totalOrderValue ? `₹${money(results.totalOrderValue)}` : "-"]
                 ];
 
-                pdfRows.forEach(([label, value]) => {
+                const drawRow = (label, value) => {
+                    const valueLines = doc.splitTextToSize(String(value), valueWidth);
                     doc.setFont("helvetica", "bold");
-                    doc.text(`${label}:`, 14, y);
+                    doc.text(doc.splitTextToSize(`${label}:`, labelWidth), margin, y);
                     doc.setFont("helvetica", "normal");
-                    doc.text(String(value), 62, y, { maxWidth: 132 });
-                    y += 7;
-                });
+                    doc.text(valueLines, valueX, y);
+                    y += Math.max(6, valueLines.length * 4.2 + 2);
+                };
+
+                pdfRows.forEach(([label, value]) => drawRow(label, value));
                 if (layoutImage) {
                     y += 2;
                     doc.setFont("helvetica", "bold");
-                    doc.text("Layout visualizer", 14, y);
+                    doc.text("Layout visualizer", margin, y);
                     y += 3;
-                    doc.addImage(layoutImage, "PNG", 14, y, 182, 76);
+                    doc.addImage(layoutImage, "PNG", margin, y, contentWidth, 76);
                     y += 82;
                 }
                 doc.save(`kd-internal-pricing-${Date.now()}.pdf`);
