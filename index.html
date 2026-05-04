@@ -222,8 +222,8 @@
         ];
 
         const MATERIAL_SIZES = {
-            "Bakelite / Phenolic Sheet": [{ label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "1220 x 1830 mm", l: 1830, w: 1220 }, { label: "1000 x 2000 mm", l: 2000, w: 1000 }, { label: "Custom size", custom: true }],
-            "FRP Sheet": [{ label: "1020 x 1220 mm", l: 1220, w: 1020 }, { label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "Custom size", custom: true }],
+            "Bakelite / Phenolic Sheet": [{ label: "2440 x 1220 x 5 mm", l: 2440, w: 1220, t: 5, price: 1997.50 }, { label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "1220 x 1830 mm", l: 1830, w: 1220 }, { label: "1000 x 2000 mm", l: 2000, w: 1000 }, { label: "Custom size", custom: true }],
+            "FRP Sheet": [{ label: "1220 x 780 x 5 mm", l: 1220, w: 780, t: 5, price: 2090.00 }, { label: "1020 x 1220 mm", l: 1220, w: 1020 }, { label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "Custom size", custom: true }],
             "Glass Epoxy Sheet": [{ label: "1020 x 1220 mm", l: 1220, w: 1020 }, { label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "Custom size", custom: true }],
             "Acrylic Sheet": [{ label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "1830 x 2440 mm", l: 2440, w: 1830 }, { label: "Custom size", custom: true }],
             "Nylon Sheet": [{ label: "1000 x 2000 mm", l: 2000, w: 1000 }, { label: "1220 x 2440 mm", l: 2440, w: 1220 }, { label: "Custom size", custom: true }],
@@ -656,24 +656,34 @@
             const [password, setPassword] = useState("");
             const [error, setError] = useState("");
             const [isChecking, setIsChecking] = useState(false);
+            const [isProcessingOpen, setProcessingOpen] = useState(false);
             const passwordRef = useRef(null);
+            const firstSheet = MATERIAL_SIZES["Bakelite / Phenolic Sheet"][0];
             const [inputs, setInputs] = useState({
                 product: "Bakelite / Phenolic Sheet",
                 rawSizeIndex: 0,
-                vLen: 2440,
-                vWid: 1220,
-                thickness: 3,
+                vLen: firstSheet.l,
+                vWid: firstSheet.w,
+                thickness: firstSheet.t,
                 cLen: 300,
                 cWid: 200,
-                pieceThickness: 3,
-                blade: 3,
-                rawPrice: 5000,
-                processingType: "fixed",
-                processingCost: 5,
+                pieceThickness: firstSheet.t,
+                blade: 2,
+                rawPrice: firstSheet.price,
+                processingCost: 0,
                 packagingType: "fixed",
-                packagingCost: 3,
-                profit: 20,
-                quantity: ""
+                packagingCost: 2.5,
+                profit: 10,
+                quantity: 1
+            });
+            const [processingDetails, setProcessingDetails] = useState({
+                sheetCutting: 0,
+                cornerCutting: 0,
+                drilling: 0,
+                tapping: 0,
+                chamfering: 0,
+                boxCutting: 0,
+                uShapeCutting: 0
             });
             const [results, setResults] = useState(null);
             const canvasRef = useRef(null);
@@ -681,9 +691,27 @@
             const selectedSizes = MATERIAL_SIZES[inputs.product];
             const selectedSize = selectedSizes[Number(inputs.rawSizeIndex)] || selectedSizes[0];
             const isCustomSize = selectedSize.custom;
+            const processingLabels = {
+                sheetCutting: "Sheet cutting",
+                cornerCutting: "Corner cutting",
+                drilling: "Drilling",
+                tapping: "Tapping",
+                chamfering: "Chamfering",
+                boxCutting: "Box cutting",
+                uShapeCutting: "U-shape cutting"
+            };
+            const processingTotal = Object.values(processingDetails).reduce((sum, value) => sum + Number(value || 0), 0);
+            const processingSummary = Object.entries(processingDetails)
+                .filter(([, value]) => Number(value || 0) > 0)
+                .map(([key, value]) => `${processingLabels[key]} ₹${Number(value).toFixed(2)}`)
+                .join(" + ");
 
             const setField = (name, value) => setInputs(prev => ({ ...prev, [name]: value }));
             const handleNumber = (e) => setField(e.target.name, e.target.value === "" ? "" : Number(e.target.value));
+            const setProcessingField = (name, value) => {
+                const numericValue = value === "" ? "" : Number(value);
+                setProcessingDetails(prev => ({ ...prev, [name]: numericValue }));
+            };
             const hashInput = async (value) => {
                 const encoder = new TextEncoder();
                 const data = encoder.encode(value);
@@ -726,7 +754,16 @@
 
             const handleProductChange = (value) => {
                 const firstSize = MATERIAL_SIZES[value][0];
-                setInputs(prev => ({ ...prev, product: value, rawSizeIndex: 0, vLen: firstSize.l, vWid: firstSize.w }));
+                setInputs(prev => ({
+                    ...prev,
+                    product: value,
+                    rawSizeIndex: 0,
+                    vLen: firstSize.l,
+                    vWid: firstSize.w,
+                    thickness: firstSize.t || prev.thickness,
+                    pieceThickness: firstSize.t || prev.pieceThickness,
+                    rawPrice: firstSize.price ?? prev.rawPrice
+                }));
                 setResults(null);
             };
 
@@ -736,7 +773,10 @@
                     ...prev,
                     rawSizeIndex: Number(value),
                     vLen: size.custom ? prev.vLen : size.l,
-                    vWid: size.custom ? prev.vWid : size.w
+                    vWid: size.custom ? prev.vWid : size.w,
+                    thickness: size.custom ? prev.thickness : (size.t || prev.thickness),
+                    pieceThickness: size.custom ? prev.pieceThickness : (size.t || prev.pieceThickness),
+                    rawPrice: size.custom ? prev.rawPrice : (size.price ?? prev.rawPrice)
                 }));
                 setResults(null);
             };
@@ -763,6 +803,8 @@
                 ctx.strokeStyle = "#334155";
                 ctx.lineWidth = 2;
                 ctx.fillRect(0, 0, drawW, drawH);
+                ctx.fillStyle = "#e5e7eb";
+                ctx.fillRect(0, 0, drawW, drawH);
                 ctx.strokeRect(0, 0, drawW, drawH);
                 const scale = drawW / sheetL;
                 const drawCutL = cutL * scale;
@@ -779,6 +821,9 @@
                         ctx.strokeRect(x, y, drawCutL, drawCutW);
                     }
                 }
+                ctx.fillStyle = "#0f172a";
+                ctx.font = "bold 12px Manrope, sans-serif";
+                ctx.fillText(`${cols * rows} pcs | Gap ${gap} mm`, 10, Math.max(18, drawH - 10));
             };
 
             const calculate = () => {
@@ -807,7 +852,7 @@
                     return;
                 }
                 const materialPerPiece = rawPrice / best.count;
-                const processingPerPiece = inputs.processingType === "percent" ? materialPerPiece * (Number(inputs.processingCost) / 100) : Number(inputs.processingCost || 0);
+                const processingPerPiece = processingTotal;
                 const packagingPerPiece = inputs.packagingType === "percent" ? materialPerPiece * (Number(inputs.packagingCost) / 100) : Number(inputs.packagingCost || 0);
                 const costBeforeProfit = materialPerPiece + processingPerPiece + packagingPerPiece;
                 const profitAmount = costBeforeProfit * (Number(inputs.profit || 0) / 100);
@@ -821,6 +866,8 @@
                     wastage,
                     materialPerPiece,
                     processingPerPiece,
+                    processingDetails: { ...processingDetails },
+                    processingTotal,
                     packagingPerPiece,
                     costBeforeProfit,
                     profitAmount,
@@ -841,6 +888,10 @@
                 return () => clearTimeout(timer);
             }, [isAuthenticated]);
 
+            useEffect(() => {
+                setInputs(prev => ({ ...prev, processingCost: processingTotal }));
+            }, [processingTotal]);
+
             const copyTable = () => {
                 const table = document.getElementById("quoteTable");
                 if (!table) return;
@@ -857,12 +908,20 @@
                 if (!results) return [];
                 return [
                     ["Selected product", inputs.product],
-                    ["Raw sheet size", `${inputs.vLen} x ${inputs.vWid} x ${inputs.thickness} mm (${results.rawSizeLabel})`],
-                    ["Required cut size", `${inputs.cLen} x ${inputs.cWid} x ${inputs.pieceThickness} mm`],
+                    ["Raw sheet length", `${inputs.vLen} mm`],
+                    ["Raw sheet width", `${inputs.vWid} mm`],
+                    ["Raw sheet thickness", `${inputs.thickness} mm`],
+                    ["Raw sheet price", `INR ${money(inputs.rawPrice)}`],
+                    ["Required piece length", `${inputs.cLen} mm`],
+                    ["Required piece width", `${inputs.cWid} mm`],
+                    ["Required piece thickness", `${inputs.pieceThickness} mm`],
+                    ["Blade gap", `${inputs.blade} mm`],
                     ["Best orientation", results.orientation],
                     ["Pieces per raw sheet", `${results.pieces}`],
                     ["Wastage percentage", `${results.wastage.toFixed(1)}%`],
                     ["Material cost per piece", `INR ${money(results.materialPerPiece)}`],
+                    ...Object.entries(processingLabels).map(([key, label]) => [label, `INR ${money(results.processingDetails[key])}`]),
+                    ["Processing cost total", `INR ${money(results.processingTotal)}`],
                     ["Processing cost per piece", `INR ${money(results.processingPerPiece)}`],
                     ["Packaging & forwarding cost per piece", `INR ${money(results.packagingPerPiece)}`],
                     ["Total cost before profit", `INR ${money(results.costBeforeProfit)}`],
@@ -890,34 +949,52 @@
                 if (!results || !window.jspdf) return;
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                let y = 18;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const canvas = canvasRef.current;
+                const layoutImage = canvas ? canvas.toDataURL("image/png") : null;
+                let y = 12;
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(18);
+                doc.setFontSize(16);
                 doc.text("KD Enterprises", 14, y);
-                y += 8;
-                doc.setFontSize(12);
-                doc.text("Internal Pricing Summary", 14, y);
-                y += 8;
-                doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
+                doc.text("Internal Pricing Summary", pageWidth - 14, y, { align: "right" });
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
                 doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, y);
-                y += 10;
-                resultRows().forEach(([label, value]) => {
-                    if (y > 275) {
-                        doc.addPage();
-                        y = 18;
-                    }
+                y += 6;
+
+                const pdfRows = [
+                    ["Product", inputs.product],
+                    ["Raw material", `${inputs.vLen} x ${inputs.vWid} x ${inputs.thickness} mm | ₹${money(inputs.rawPrice)}`],
+                    ["Required size", `${inputs.cLen} x ${inputs.cWid} x ${inputs.pieceThickness} mm | Qty ${results.quantity || 0} | Gap ${inputs.blade} mm`],
+                    ["Pieces / wastage", `${results.pieces} pcs per sheet | ${results.wastage.toFixed(1)}% wastage`],
+                    ["Processing", `${processingSummary || "No processing cost"} | Total ₹${money(results.processingTotal)}`],
+                    ["Packaging & forwarding", `₹${money(results.packagingPerPiece)} per piece`],
+                    ["Profit", `${results.profitPercent}% | ₹${money(results.profitAmount)}`],
+                    ["Final price / piece", `₹${money(results.finalSellingPrice)}`],
+                    ["Total order value", results.totalOrderValue ? `₹${money(results.totalOrderValue)}` : "-"]
+                ];
+
+                pdfRows.forEach(([label, value]) => {
                     doc.setFont("helvetica", "bold");
                     doc.text(`${label}:`, 14, y);
                     doc.setFont("helvetica", "normal");
-                    doc.text(String(value), 78, y);
-                    y += 8;
+                    doc.text(String(value), 62, y, { maxWidth: 132 });
+                    y += 7;
                 });
-                y += 6;
+                if (layoutImage) {
+                    y += 2;
+                    doc.setFont("helvetica", "bold");
+                    doc.text("Layout visualizer", 14, y);
+                    y += 3;
+                    doc.addImage(layoutImage, "PNG", 14, y, 182, 76);
+                    y += 82;
+                }
                 doc.setFont("helvetica", "bold");
                 doc.text("Disclaimer:", 14, y);
                 doc.setFont("helvetica", "normal");
-                doc.text("Internal estimate only. Not a final customer quotation.", 42, y);
+                doc.text("Internal estimate only. Not a final customer quotation.", 42, y, { maxWidth: 150 });
                 doc.save(`kd-internal-pricing-${Date.now()}.pdf`);
             };
 
@@ -984,13 +1061,24 @@
                                     <NumberInput label="Piece Width" name="cWid" value={inputs.cWid} onChange={handleNumber} suffix="mm" />
                                     <NumberInput label="Piece Thickness" name="pieceThickness" value={inputs.pieceThickness} onChange={handleNumber} suffix="mm" />
                                     <NumberInput label="Quantity Required" name="quantity" value={inputs.quantity} onChange={handleNumber} suffix="pcs" />
-                                    <NumberInput label="Blade Gap" name="blade" value={inputs.blade} onChange={handleNumber} suffix="mm" />
+                                    <NumberInput label="Blade Gap / Cutting Gap" name="blade" value={inputs.blade} onChange={handleNumber} suffix="mm" />
                                 </div>
                             </CalcStep>
 
                             <CalcStep number="4" title="Cost & Margin Details">
                                 <div className="space-y-3">
-                                    <CostInput label="Processing Cost" type={inputs.processingType} typeName="processingType" valueName="processingCost" value={inputs.processingCost} setField={setField} handleNumber={handleNumber} />
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Processing Cost</p>
+                                                <p className="text-2xl font-extrabold text-slate-950">₹{money(processingTotal)}</p>
+                                            </div>
+                                            <button type="button" onClick={() => setProcessingOpen(true)} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-extrabold text-white hover:bg-slate-800">
+                                                Add Processing Cost Details
+                                            </button>
+                                        </div>
+                                        <p className="mt-3 text-xs text-slate-600">{processingSummary ? `${processingSummary} = ₹${money(processingTotal)}` : "No processing cost added yet. All operation values can remain zero."}</p>
+                                    </div>
                                     <CostInput label="Packaging & Forwarding" type={inputs.packagingType} typeName="packagingType" valueName="packagingCost" value={inputs.packagingCost} setField={setField} handleNumber={handleNumber} />
                                     <NumberInput label="Profit" name="profit" value={inputs.profit} onChange={handleNumber} suffix="%" />
                                 </div>
@@ -1048,7 +1136,7 @@
                                                 <PriceRow label="Pieces per Raw Sheet" value={`${results.pieces} pcs`} />
                                                 <PriceRow label="Wastage Percentage" value={`${results.wastage.toFixed(1)}%`} />
                                                 <PriceRow label="Material Cost / Piece" value={`INR ${money(results.materialPerPiece)}`} />
-                                                <PriceRow label="Processing Cost / Piece" value={`INR ${money(results.processingPerPiece)}`} />
+                                                <PriceRow label="Processing Cost Total" value={`INR ${money(results.processingTotal)}`} />
                                                 <PriceRow label="Packaging & Forwarding / Piece" value={`INR ${money(results.packagingPerPiece)}`} />
                                                 <PriceRow label="Total Before Profit" value={`INR ${money(results.costBeforeProfit)}`} />
                                                 <PriceRow label="Profit Percentage" value={`${results.profitPercent}%`} />
@@ -1063,9 +1151,50 @@
                             )}
                         </div>
                     </div>
+                    {isProcessingOpen && (
+                        <ProcessingCostModal
+                            values={processingDetails}
+                            labels={processingLabels}
+                            onChange={setProcessingField}
+                            onClose={() => setProcessingOpen(false)}
+                            total={processingTotal}
+                        />
+                    )}
                 </div>
             );
         };
+
+        const ProcessingCostModal = ({ values, labels, onChange, onClose, total }) => (
+            <div className="fixed inset-0 z-[70] bg-slate-950/70 p-4 flex items-center justify-center" onClick={onClose}>
+                <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-5">
+                        <div>
+                            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">Processing</p>
+                            <h3 className="text-xl font-extrabold text-slate-950">Processing Cost Details</h3>
+                        </div>
+                        <button type="button" onClick={onClose} className="rounded-md p-2 hover:bg-slate-100"><Icon name="x" className="w-5 h-5" /></button>
+                    </div>
+                    <div className="p-5">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            {Object.entries(labels).map(([key, label]) => (
+                                <label key={key} className="block">
+                                    <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">{label}</span>
+                                    <div className="mt-1 flex rounded-md border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500">
+                                        <input type="number" value={values[key]} onChange={(e) => onChange(key, e.target.value)} className="w-full px-3 py-2.5 outline-none" />
+                                        <span className="px-3 py-2.5 bg-slate-50 text-slate-500 text-sm font-bold border-l border-slate-200">INR</span>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="mt-5 rounded-lg bg-slate-900 p-4 text-white flex items-center justify-between gap-4">
+                            <span className="font-extrabold">Processing total</span>
+                            <span className="text-2xl font-extrabold">₹{Number(total || 0).toFixed(2)}</span>
+                        </div>
+                        <button type="button" onClick={onClose} className="mt-5 w-full rounded-md bg-blue-700 px-4 py-3 font-extrabold text-white hover:bg-blue-600">Done</button>
+                    </div>
+                </div>
+            </div>
+        );
 
         const CalcStep = ({ number, title, children }) => (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
