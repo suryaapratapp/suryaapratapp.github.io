@@ -1279,11 +1279,15 @@
                     drawingNo: findHeader(["drg", "drawing", "article no"]),
                     material: findHeader(["material"]),
                     size: findHeader(["size", "thickness"]),
+                    sheetCutting: findHeader(["sheet cutting", "cutting cost", "cutting charge", "straight cutting"]),
                     drilling: findHeader(["drilling", "holes"]),
                     slot: findHeader(["slot", "cutout", "counterbore"]),
+                    boxCutting: findHeader(["box cutting", "box cut"]),
+                    uShapeCutting: findHeader(["u-shape", "u shape", "u cutting"]),
                     corner: findHeader(["corner", "radius"]),
                     chamfering: findHeader(["chamfer"]),
                     tapping: findHeader(["tapping"]),
+                    additionalCustomisation: findHeader(["other operation", "customisation", "customization"]),
                     notes: findHeader(["notes", "other"])
                 };
             };
@@ -1327,6 +1331,30 @@
                 };
             };
 
+            const readOperationValue = (value) => {
+                const text = String(value || "").trim();
+                if (!text) return 0;
+                const numeric = text.match(/\d+(\.\d+)?/g);
+                return numeric ? Number(numeric[0]) : 0;
+            };
+
+            const collectOperationNotes = (row) => {
+                const operationFields = [
+                    ["Sheet cutting", columnMapping.sheetCutting],
+                    ["Drilling / holes", columnMapping.drilling],
+                    ["Slot / cutout / counterbore", columnMapping.slot],
+                    ["Corner cutting / radius", columnMapping.corner],
+                    ["Chamfering", columnMapping.chamfering],
+                    ["Tapping", columnMapping.tapping],
+                    ["Box cutting", columnMapping.boxCutting],
+                    ["U-shape cutting", columnMapping.uShapeCutting],
+                    ["Other operation", columnMapping.additionalCustomisation]
+                ];
+                return operationFields
+                    .map(([label, header]) => header && row[header] ? `${label}: ${row[header]}` : "")
+                    .filter(Boolean);
+            };
+
             const matchProductFromMaterial = (value) => {
                 const text = String(value || "").toLowerCase();
                 if (text.includes("frp")) return "FRP Sheet";
@@ -1357,7 +1385,21 @@
                     pieceThickness: size.thickness,
                     quantity: 1
                 }));
-                setProcessingNotes([row[columnMapping.description], row[columnMapping.drawingNo], row[columnMapping.notes]].filter(Boolean).join(" | "));
+                const nextProcessingDetails = {
+                    sheetCutting: readOperationValue(row[columnMapping.sheetCutting]),
+                    cornerCutting: readOperationValue(row[columnMapping.corner]),
+                    drilling: readOperationValue(row[columnMapping.drilling]),
+                    tapping: readOperationValue(row[columnMapping.tapping]),
+                    chamfering: readOperationValue(row[columnMapping.chamfering]),
+                    boxCutting: readOperationValue(row[columnMapping.boxCutting] || row[columnMapping.slot]),
+                    uShapeCutting: readOperationValue(row[columnMapping.uShapeCutting]),
+                    roundCorners: 0,
+                    additionalCustomisation: readOperationValue(row[columnMapping.additionalCustomisation])
+                };
+                const baseNotes = [row[columnMapping.description], row[columnMapping.drawingNo], row[columnMapping.notes]].filter(Boolean);
+                const operationNotes = collectOperationNotes(row);
+                setProcessingDetails(nextProcessingDetails);
+                setProcessingNotes([...baseNotes, ...operationNotes, operationNotes.length ? "Auto-read from upload. Confirm operation rates before final quotation." : ""].filter(Boolean).join(" | "));
                 setSelectedUploadIndex(rowIndex);
                 setResults(null);
             };
@@ -1612,12 +1654,24 @@
                             </div>
                             {uploadHeaders.length > 0 && (
                                 <div className="space-y-4">
-                                    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                                        Operation columns are auto-read into the processing dialog when an item is loaded. Review and edit the values before final costing, especially when the upload contains counts or notes instead of INR rates.
+                                    </div>
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                         {[
                                             ["description", "Description"],
                                             ["drawingNo", "Drawing No."],
                                             ["material", "Material"],
                                             ["size", "Size / Thickness"],
+                                            ["sheetCutting", "Sheet Cutting"],
+                                            ["drilling", "Drilling / Holes"],
+                                            ["slot", "Slot / Cutout"],
+                                            ["corner", "Corner / Radius"],
+                                            ["chamfering", "Chamfer"],
+                                            ["tapping", "Tapping"],
+                                            ["boxCutting", "Box Cutting"],
+                                            ["uShapeCutting", "U-shape Cutting"],
+                                            ["additionalCustomisation", "Other Operation"],
                                             ["notes", "Notes"]
                                         ].map(([key, label]) => (
                                             <label key={key} className="block">
@@ -1636,17 +1690,19 @@
                                     </div>
                                     <div className="overflow-x-auto border border-slate-200 rounded-lg">
                                         <table className="w-full min-w-[900px] text-xs">
-                                            <thead className="bg-slate-50">{uploadHeaders.slice(0, 8).map(header => <th key={header} className="p-2 text-left">{header}</th>)}</thead>
+                                            <thead className="bg-slate-50">
+                                                <tr>{uploadHeaders.slice(0, 10).map(header => <th key={header} className="p-2 text-left">{header}</th>)}</tr>
+                                            </thead>
                                             <tbody>
-                                                {uploadRows.slice(0, 8).map((row, index) => (
+                                                {uploadRows.slice(0, 30).map((row, index) => (
                                                     <tr key={index} onClick={() => setSelectedUploadIndex(index)} className={`cursor-pointer border-t border-slate-100 ${selectedUploadIndex === index ? "bg-blue-50" : ""}`}>
-                                                        {uploadHeaders.slice(0, 8).map(header => <td key={header} className="p-2">{row[header]}</td>)}
+                                                        {uploadHeaders.slice(0, 10).map(header => <td key={header} className="p-2">{row[header]}</td>)}
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                    <p className="text-xs text-slate-500">Missing fields should be confirmed manually after loading an item. The system guides costing but does not assume final rates.</p>
+                                    <p className="text-xs text-slate-500">Showing up to 30 uploaded items in preview. Missing fields should be confirmed manually after loading an item. The system guides costing but does not assume final rates.</p>
                                 </div>
                             )}
                         </div>
