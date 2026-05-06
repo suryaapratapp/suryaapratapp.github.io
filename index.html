@@ -20,6 +20,8 @@
 
     <!-- jsPDF for internal calculator PDF export -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -657,6 +659,21 @@
             const [error, setError] = useState("");
             const [isChecking, setIsChecking] = useState(false);
             const [isProcessingOpen, setProcessingOpen] = useState(false);
+            const [calculatedItems, setCalculatedItems] = useState([]);
+            const [itemSearch, setItemSearch] = useState("");
+            const [uploadRows, setUploadRows] = useState([]);
+            const [uploadHeaders, setUploadHeaders] = useState([]);
+            const [columnMapping, setColumnMapping] = useState({});
+            const [selectedUploadIndex, setSelectedUploadIndex] = useState(0);
+            const [processingNotes, setProcessingNotes] = useState("");
+            const [presetName, setPresetName] = useState("");
+            const [processingPresets, setProcessingPresets] = useState(() => {
+                try {
+                    return JSON.parse(localStorage.getItem("kd_processing_presets") || "[]");
+                } catch (error) {
+                    return [];
+                }
+            });
             const passwordRef = useRef(null);
             const firstSheet = MATERIAL_SIZES["Bakelite / Phenolic Sheet"][0];
             const [inputs, setInputs] = useState({
@@ -683,7 +700,9 @@
                 tapping: 0,
                 chamfering: 0,
                 boxCutting: 0,
-                uShapeCutting: 0
+                uShapeCutting: 0,
+                roundCorners: 0,
+                additionalCustomisation: 0
             });
             const [results, setResults] = useState(null);
             const canvasRef = useRef(null);
@@ -698,19 +717,55 @@
                 tapping: "Tapping",
                 chamfering: "Chamfering",
                 boxCutting: "Box cutting",
-                uShapeCutting: "U-shape cutting"
+                uShapeCutting: "U-shape cutting",
+                roundCorners: "Round corners",
+                additionalCustomisation: "Additional customisation"
             };
             const processingTotal = Object.values(processingDetails).reduce((sum, value) => sum + Number(value || 0), 0);
             const processingSummary = Object.entries(processingDetails)
                 .filter(([, value]) => Number(value || 0) > 0)
                 .map(([key, value]) => `${processingLabels[key]} ₹${Number(value).toFixed(2)}`)
                 .join(" + ");
+            const money = value => Number(value || 0).toFixed(2);
+            const currentDateISO = () => new Date().toISOString().slice(0, 10);
+            const fileSafe = (value) => String(value || "KD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+            const currentCutSizeName = () => `${inputs.cLen}x${inputs.cWid}x${inputs.pieceThickness}`;
+            const filteredItems = calculatedItems.filter(item => {
+                const query = itemSearch.trim().toLowerCase();
+                if (!query) return true;
+                return [item.product, item.requiredSize, item.notes, item.sourceDescription].join(" ").toLowerCase().includes(query);
+            });
+            const grandTotal = calculatedItems.reduce((sum, item) => sum + Number(item.totalOrderValue || 0), 0);
 
             const setField = (name, value) => setInputs(prev => ({ ...prev, [name]: value }));
             const handleNumber = (e) => setField(e.target.name, e.target.value === "" ? "" : Number(e.target.value));
             const setProcessingField = (name, value) => {
                 const numericValue = value === "" ? "" : Number(value);
                 setProcessingDetails(prev => ({ ...prev, [name]: numericValue }));
+            };
+            const savePreset = () => {
+                const name = presetName.trim();
+                if (!name) {
+                    alert("Enter a preset name first.");
+                    return;
+                }
+                const nextPresets = [...processingPresets.filter(preset => preset.name !== name), { name, values: processingDetails, notes: processingNotes }];
+                setProcessingPresets(nextPresets);
+                localStorage.setItem("kd_processing_presets", JSON.stringify(nextPresets));
+                setPresetName("");
+            };
+            const applyPreset = (name) => {
+                const defaultPresets = [
+                    { name: "Simple cut", values: { sheetCutting: 5, cornerCutting: 0, drilling: 0, tapping: 0, chamfering: 0, boxCutting: 0, uShapeCutting: 0, roundCorners: 0, additionalCustomisation: 0 }, notes: "Simple straight cutting" },
+                    { name: "Electrical panel cut", values: { sheetCutting: 8, cornerCutting: 4, drilling: 6, tapping: 0, chamfering: 0, boxCutting: 0, uShapeCutting: 0, roundCorners: 0, additionalCustomisation: 0 }, notes: "Electrical panel drilling and corner work" },
+                    { name: "Heavy drilling", values: { sheetCutting: 8, cornerCutting: 0, drilling: 18, tapping: 0, chamfering: 0, boxCutting: 0, uShapeCutting: 0, roundCorners: 0, additionalCustomisation: 0 }, notes: "High drilling count" },
+                    { name: "Solar mounting plate", values: { sheetCutting: 8, cornerCutting: 5, drilling: 8, tapping: 0, chamfering: 2, boxCutting: 0, uShapeCutting: 0, roundCorners: 0, additionalCustomisation: 0 }, notes: "Solar mounting plate costing" },
+                    { name: "FRP panel cutting", values: { sheetCutting: 10, cornerCutting: 3, drilling: 0, tapping: 0, chamfering: 0, boxCutting: 0, uShapeCutting: 0, roundCorners: 0, additionalCustomisation: 0 }, notes: "FRP panel cutting" }
+                ];
+                const preset = [...defaultPresets, ...processingPresets].find(item => item.name === name);
+                if (!preset) return;
+                setProcessingDetails(preset.values);
+                setProcessingNotes(preset.notes || "");
             };
             const hashInput = async (value) => {
                 const encoder = new TextEncoder();
@@ -892,6 +947,29 @@
                 setInputs(prev => ({ ...prev, processingCost: processingTotal }));
             }, [processingTotal]);
 
+            useEffect(() => {
+                if (!isAuthenticated) return;
+                const requiredValues = [inputs.vLen, inputs.vWid, inputs.cLen, inputs.cWid, inputs.rawPrice].map(Number);
+                if (requiredValues.some(value => !value || value <= 0)) return;
+                const timer = setTimeout(() => calculate(), 250);
+                return () => clearTimeout(timer);
+            }, [inputs, processingDetails]);
+
+            useEffect(() => {
+                try {
+                    const draft = JSON.parse(localStorage.getItem("kd_quote_draft") || "null");
+                    if (draft && Array.isArray(draft.items)) {
+                        setCalculatedItems(draft.items);
+                    }
+                } catch (error) {
+                    setCalculatedItems([]);
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem("kd_quote_draft", JSON.stringify({ items: calculatedItems }));
+            }, [calculatedItems]);
+
             const copyTable = () => {
                 const table = document.getElementById("quoteTable");
                 if (!table) return;
@@ -931,6 +1009,89 @@
                     ["Quantity", results.quantity ? `${results.quantity} pcs` : "-"],
                     ["Total order value", results.totalOrderValue ? `INR ${money(results.totalOrderValue)}` : "-"]
                 ];
+            };
+
+            const buildItemSnapshot = () => {
+                if (!results) return null;
+                return {
+                    id: Date.now() + Math.random(),
+                    product: inputs.product,
+                    rawLength: Number(inputs.vLen),
+                    rawWidth: Number(inputs.vWid),
+                    rawThickness: Number(inputs.thickness),
+                    rawPrice: Number(inputs.rawPrice),
+                    cutLength: Number(inputs.cLen),
+                    cutWidth: Number(inputs.cWid),
+                    cutThickness: Number(inputs.pieceThickness),
+                    requiredSize: `${inputs.cLen} x ${inputs.cWid} x ${inputs.pieceThickness} mm`,
+                    quantity: Number(inputs.quantity || 0),
+                    bladeGap: Number(inputs.blade || 0),
+                    pieces: results.pieces,
+                    wastage: results.wastage,
+                    materialPerPiece: results.materialPerPiece,
+                    processingPerPiece: results.processingPerPiece,
+                    processingDetails: { ...results.processingDetails },
+                    processingNotes,
+                    packagingPerPiece: results.packagingPerPiece,
+                    profitPercent: results.profitPercent,
+                    profitAmount: results.profitAmount,
+                    finalSellingPrice: results.finalSellingPrice,
+                    totalOrderValue: results.totalOrderValue || 0,
+                    costBeforeProfit: results.costBeforeProfit,
+                    orientation: results.orientation,
+                    sourceDescription: "",
+                    inputs: { ...inputs },
+                    layout: { ...results.layout }
+                };
+            };
+
+            const addCurrentItem = () => {
+                const item = buildItemSnapshot();
+                if (!item) {
+                    alert("Calculate pricing before adding item.");
+                    return;
+                }
+                setCalculatedItems(prev => [...prev, item]);
+            };
+
+            const editItem = (item) => {
+                setInputs(item.inputs);
+                setProcessingDetails(item.processingDetails);
+                setProcessingNotes(item.processingNotes || "");
+                setResults(null);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            };
+
+            const duplicateItem = (item) => {
+                setCalculatedItems(prev => [...prev, { ...item, id: Date.now() + Math.random(), sourceDescription: `${item.sourceDescription || item.product} copy` }]);
+            };
+
+            const deleteItem = (id) => {
+                setCalculatedItems(prev => prev.filter(item => item.id !== id));
+            };
+
+            const resetCurrentItem = () => {
+                const size = MATERIAL_SIZES["Bakelite / Phenolic Sheet"][0];
+                setInputs({
+                    product: "Bakelite / Phenolic Sheet",
+                    rawSizeIndex: 0,
+                    vLen: size.l,
+                    vWid: size.w,
+                    thickness: size.t,
+                    cLen: 300,
+                    cWid: 200,
+                    pieceThickness: size.t,
+                    blade: 2,
+                    rawPrice: size.price,
+                    processingCost: 0,
+                    packagingType: "fixed",
+                    packagingCost: 2.5,
+                    profit: 10,
+                    quantity: 1
+                });
+                setProcessingDetails(Object.fromEntries(Object.keys(processingLabels).map(key => [key, 0])));
+                setProcessingNotes("");
+                setResults(null);
             };
 
             const downloadCSV = () => {
@@ -1002,7 +1163,216 @@
                     doc.addImage(layoutImage, "PNG", margin, y, contentWidth, 76);
                     y += 82;
                 }
-                doc.save(`kd-internal-pricing-${Date.now()}.pdf`);
+                doc.save(`${fileSafe(currentCutSizeName())}_${currentDateISO()}.pdf`);
+            };
+
+            const combinedRows = () => calculatedItems.map((item, index) => ({
+                "Sr No.": index + 1,
+                Product: item.product,
+                "Required Size": item.requiredSize,
+                Thickness: item.cutThickness,
+                Quantity: item.quantity,
+                "Raw Material": `${item.rawLength} x ${item.rawWidth} x ${item.rawThickness} mm`,
+                "Raw Sheet Price": money(item.rawPrice),
+                "Blade Gap": item.bladeGap,
+                "Pieces Per Sheet": item.pieces,
+                "Wastage %": item.wastage.toFixed(1),
+                "Material Cost": money(item.materialPerPiece),
+                "Sheet Cutting": money(item.processingDetails.sheetCutting),
+                "Corner Cutting": money(item.processingDetails.cornerCutting),
+                Drilling: money(item.processingDetails.drilling),
+                Tapping: money(item.processingDetails.tapping),
+                Chamfering: money(item.processingDetails.chamfering),
+                "Box Cutting": money(item.processingDetails.boxCutting),
+                "U-shape Cutting": money(item.processingDetails.uShapeCutting),
+                "Round Corners": money(item.processingDetails.roundCorners),
+                "Additional Customisation": money(item.processingDetails.additionalCustomisation),
+                "Processing Total": money(item.processingPerPiece),
+                "Packaging Cost": money(item.packagingPerPiece),
+                "Profit %": item.profitPercent,
+                "Final Selling Price/Piece": money(item.finalSellingPrice),
+                "Total Item Value": money(item.totalOrderValue),
+                Notes: item.processingNotes || item.sourceDescription || ""
+            }));
+
+            const exportCombinedCSV = () => {
+                if (!calculatedItems.length) return;
+                const rows = combinedRows();
+                const headers = Object.keys(rows[0]);
+                const csv = [headers, ...rows.map(row => headers.map(header => row[header]))]
+                    .map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
+                    .join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `KD-Quotation_${currentDateISO()}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            };
+
+            const exportCombinedXLSX = () => {
+                if (!calculatedItems.length || !window.XLSX) return;
+                const worksheet = XLSX.utils.json_to_sheet(combinedRows());
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "KD Quotation");
+                XLSX.writeFile(workbook, `KD-Quotation_${currentDateISO()}.xlsx`);
+            };
+
+            const generateCombinedPDF = () => {
+                if (!calculatedItems.length || !window.jspdf) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const margin = 12;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                let y = 12;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(15);
+                doc.text("KD Enterprises", margin, y);
+                doc.setFontSize(10);
+                doc.text(`Internal Quotation | ${currentDateISO()}`, pageWidth - margin, y, { align: "right" });
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.text("St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India", margin, y, { maxWidth: pageWidth - 2 * margin });
+                y += 5;
+                doc.text("kd.enterprises2009@yahoo.in | sales@kd-enterprises.co.in", margin, y);
+                y += 7;
+
+                calculatedItems.forEach((item, index) => {
+                    if (y > pageHeight - 42) {
+                        doc.addPage();
+                        y = 12;
+                    }
+                    doc.setFillColor(241, 245, 249);
+                    doc.rect(margin, y - 4, pageWidth - 2 * margin, 25, "F");
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8.5);
+                    doc.text(`${index + 1}. ${item.product}`, margin + 2, y);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`Size: ${item.requiredSize} | Qty: ${item.quantity} | Pcs/sheet: ${item.pieces}`, margin + 2, y + 5);
+                    doc.text(`Material: ₹${money(item.materialPerPiece)} | Processing: ₹${money(item.processingPerPiece)} | Packaging: ₹${money(item.packagingPerPiece)} | Profit: ${item.profitPercent}%`, margin + 2, y + 10);
+                    const proc = Object.entries(item.processingDetails).filter(([, value]) => Number(value || 0) > 0).map(([key, value]) => `${processingLabels[key]} ₹${money(value)}`).join(", ") || "No processing cost";
+                    doc.text(doc.splitTextToSize(`Processing: ${proc}`, pageWidth - 2 * margin - 4), margin + 2, y + 15);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Final: ₹${money(item.finalSellingPrice)} / pc | Total: ₹${money(item.totalOrderValue)}`, pageWidth - margin - 2, y + 5, { align: "right" });
+                    y += 29;
+                });
+                if (y > pageHeight - 24) {
+                    doc.addPage();
+                    y = 12;
+                }
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.text(`Grand Total: ₹${money(grandTotal)}`, pageWidth - margin, y, { align: "right" });
+                y += 8;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.text("Internal estimate only. Not final customer quotation.", margin, y);
+                doc.save(`KD-Quotation_${currentDateISO()}.pdf`);
+            };
+
+            const guessMapping = (headers) => {
+                const findHeader = (patterns) => headers.find(header => patterns.some(pattern => header.toLowerCase().includes(pattern)));
+                return {
+                    description: findHeader(["article name", "description", "item"]),
+                    drawingNo: findHeader(["drg", "drawing", "article no"]),
+                    material: findHeader(["material"]),
+                    size: findHeader(["size", "thickness"]),
+                    drilling: findHeader(["drilling", "holes"]),
+                    slot: findHeader(["slot", "cutout", "counterbore"]),
+                    corner: findHeader(["corner", "radius"]),
+                    chamfering: findHeader(["chamfer"]),
+                    tapping: findHeader(["tapping"]),
+                    notes: findHeader(["notes", "other"])
+                };
+            };
+
+            const handleDrawingUpload = async (event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const ext = file.name.split(".").pop().toLowerCase();
+                if (ext === "xlsx" || ext === "xls") {
+                    const buffer = await file.arrayBuffer();
+                    const workbook = XLSX.read(buffer, { type: "array" });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    const headers = Object.keys(rows[0] || {});
+                    setUploadRows(rows);
+                    setUploadHeaders(headers);
+                    setColumnMapping(guessMapping(headers));
+                    setSelectedUploadIndex(0);
+                    return;
+                }
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: ({ data, meta }) => {
+                        const rows = data.filter(row => Object.values(row).some(Boolean));
+                        const headers = meta.fields || Object.keys(rows[0] || {});
+                        setUploadRows(rows);
+                        setUploadHeaders(headers);
+                        setColumnMapping(guessMapping(headers));
+                        setSelectedUploadIndex(0);
+                    }
+                });
+            };
+
+            const parseSizeText = (value) => {
+                const nums = String(value || "").match(/\d+(\.\d+)?/g) || [];
+                return {
+                    length: nums[0] ? Number(nums[0]) : inputs.cLen,
+                    width: nums[1] ? Number(nums[1]) : inputs.cWid,
+                    thickness: nums[2] ? Number(nums[2]) : inputs.pieceThickness
+                };
+            };
+
+            const matchProductFromMaterial = (value) => {
+                const text = String(value || "").toLowerCase();
+                if (text.includes("frp")) return "FRP Sheet";
+                if (text.includes("glass") || text.includes("epoxy") || text.includes("fr4") || text.includes("g10")) return "Glass Epoxy Sheet";
+                if (text.includes("acrylic")) return "Acrylic Sheet";
+                if (text.includes("nylon")) return "Nylon Sheet";
+                if (text.includes("delrin") || text.includes("acetal")) return "Delrin Sheet";
+                return "Bakelite / Phenolic Sheet";
+            };
+
+            const loadUploadRow = (rowIndex = selectedUploadIndex) => {
+                const row = uploadRows[rowIndex];
+                if (!row) return;
+                const materialText = row[columnMapping.material] || "";
+                const product = matchProductFromMaterial(materialText);
+                const size = parseSizeText(row[columnMapping.size]);
+                const defaultSheet = MATERIAL_SIZES[product][0];
+                setInputs(prev => ({
+                    ...prev,
+                    product,
+                    rawSizeIndex: 0,
+                    vLen: defaultSheet.l,
+                    vWid: defaultSheet.w,
+                    thickness: defaultSheet.t || size.thickness,
+                    rawPrice: defaultSheet.price || prev.rawPrice,
+                    cLen: size.length,
+                    cWid: size.width,
+                    pieceThickness: size.thickness,
+                    quantity: 1
+                }));
+                setProcessingNotes([row[columnMapping.description], row[columnMapping.drawingNo], row[columnMapping.notes]].filter(Boolean).join(" | "));
+                setSelectedUploadIndex(rowIndex);
+                setResults(null);
+            };
+
+            const nextUploadItem = () => loadUploadRow(Math.min(uploadRows.length - 1, selectedUploadIndex + 1));
+            const previousUploadItem = () => loadUploadRow(Math.max(0, selectedUploadIndex - 1));
+
+            const applySameCostingToList = () => {
+                setCalculatedItems(prev => prev.map(item => ({
+                    ...item,
+                    processingDetails: { ...processingDetails },
+                    processingPerPiece: processingTotal,
+                    processingTotal,
+                    processingNotes
+                })));
             };
 
             if (!isAuthenticated) {
@@ -1029,8 +1399,6 @@
                     </div>
                 );
             }
-
-            const money = value => Number(value || 0).toFixed(2);
 
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen">
@@ -1094,6 +1462,11 @@
                             <button type="button" onClick={calculate} onMouseDown={calculate} onTouchStart={calculate} className="w-full bg-blue-700 hover:bg-blue-600 text-white border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-4 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
                                 Calculate Pricing <Icon name="calculator" className="w-4 h-4" />
                             </button>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button type="button" onClick={addCurrentItem} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Add Current Item</button>
+                                <button type="button" onClick={resetCurrentItem} className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Reset Current Item</button>
+                            </div>
+                            <button type="button" onClick={() => localStorage.setItem("kd_quote_draft", JSON.stringify({ items: calculatedItems }))} className="w-full rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-extrabold text-blue-800 hover:bg-blue-100">Save Draft</button>
                         </div>
 
                         <div className="lg:col-span-8 space-y-6">
@@ -1111,6 +1484,21 @@
                                     </div>
                                 )}
                             </CalcStep>
+
+                            {results && (
+                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                    <h3 className="font-extrabold text-lg text-slate-950 mb-4">Cost Explanation</h3>
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                                        <Metric label="Material Cost" value={`₹${money(results.materialPerPiece)}`} />
+                                        <Metric label="Processing" value={`₹${money(results.processingPerPiece)}`} />
+                                        <Metric label="Packaging" value={`₹${money(results.packagingPerPiece)}`} />
+                                        <Metric label="Profit" value={`${results.profitPercent}%`} />
+                                        <Metric label="Final Selling Price" value={`₹${money(results.finalSellingPrice)}`} highlight />
+                                        <Metric label="Total Order Value" value={`₹${money(results.totalOrderValue)}`} />
+                                    </div>
+                                    <p className="mt-3 text-xs text-slate-500">{processingSummary || "Processing: no operation cost added."}</p>
+                                </div>
+                            )}
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -1158,6 +1546,111 @@
                             )}
                         </div>
                     </div>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+                                <div>
+                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">Batch Costing</p>
+                                    <h3 className="text-2xl font-extrabold text-slate-950">Calculated Items List</h3>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button type="button" onClick={addCurrentItem} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-extrabold text-white">Add Current Calculation to List</button>
+                                    <button type="button" onClick={applySameCostingToList} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700">Apply Same Costing</button>
+                                    <button type="button" onClick={() => setCalculatedItems([])} className="rounded-md border border-red-200 px-3 py-2 text-xs font-extrabold text-red-700">Clear All</button>
+                                    <button type="button" onClick={generateCombinedPDF} className="rounded-md bg-blue-700 px-3 py-2 text-xs font-extrabold text-white">Generate Combined PDF</button>
+                                    <button type="button" onClick={exportCombinedCSV} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700">Export Combined CSV</button>
+                                    <button type="button" onClick={exportCombinedXLSX} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700">Export XLSX</button>
+                                </div>
+                            </div>
+                            <input value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} placeholder="Search calculated items..." className="mb-4 w-full rounded-md border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-blue-500" />
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[1180px] text-sm">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                                        <tr>
+                                            {["Sr No.", "Product", "Required Size", "Thickness", "Quantity", "Pieces per sheet", "Material cost", "Processing cost", "Packaging cost", "Profit %", "Final selling price/piece", "Total item value", "Actions"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredItems.map((item, index) => (
+                                            <tr key={item.id} className="border-t border-slate-100">
+                                                <td className="p-3 font-bold">{index + 1}</td>
+                                                <td className="p-3">{item.product}</td>
+                                                <td className="p-3">{item.requiredSize}</td>
+                                                <td className="p-3">{item.cutThickness} mm</td>
+                                                <td className="p-3">{item.quantity}</td>
+                                                <td className="p-3">{item.pieces}</td>
+                                                <td className="p-3">₹{money(item.materialPerPiece)}</td>
+                                                <td className="p-3">₹{money(item.processingPerPiece)}</td>
+                                                <td className="p-3">₹{money(item.packagingPerPiece)}</td>
+                                                <td className="p-3">{item.profitPercent}%</td>
+                                                <td className="p-3 font-bold">₹{money(item.finalSellingPrice)}</td>
+                                                <td className="p-3 font-bold">₹{money(item.totalOrderValue)}</td>
+                                                <td className="p-3">
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => editItem(item)} className="text-blue-700 font-bold">Edit</button>
+                                                        <button onClick={() => duplicateItem(item)} className="text-slate-700 font-bold">Duplicate</button>
+                                                        <button onClick={() => deleteItem(item.id)} className="text-red-700 font-bold">Delete</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {!filteredItems.length && <tr><td colSpan="13" className="p-6 text-center text-slate-500 font-bold">No calculated items added yet.</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="mt-4 text-right text-xl font-extrabold text-slate-950">Grand Total: ₹{money(grandTotal)}</div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+                                <div>
+                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">Drawing Upload</p>
+                                    <h3 className="text-2xl font-extrabold text-slate-950">Upload Drawing CSV/xlsx</h3>
+                                    <p className="text-sm text-slate-500 mt-1">Upload rows, map columns, then load each item into the guided costing flow for confirmation.</p>
+                                </div>
+                                <input type="file" accept=".csv,.xlsx,.xls" onChange={handleDrawingUpload} className="text-sm" />
+                            </div>
+                            {uploadHeaders.length > 0 && (
+                                <div className="space-y-4">
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                        {[
+                                            ["description", "Description"],
+                                            ["drawingNo", "Drawing No."],
+                                            ["material", "Material"],
+                                            ["size", "Size / Thickness"],
+                                            ["notes", "Notes"]
+                                        ].map(([key, label]) => (
+                                            <label key={key} className="block">
+                                                <span className="text-xs font-extrabold text-slate-500 uppercase">{label}</span>
+                                                <select value={columnMapping[key] || ""} onChange={(e) => setColumnMapping(prev => ({ ...prev, [key]: e.target.value }))} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-2 text-sm">
+                                                    <option value="">Not mapped</option>
+                                                    {uploadHeaders.map(header => <option key={header}>{header}</option>)}
+                                                </select>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button type="button" onClick={previousUploadItem} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold">Previous Item</button>
+                                        <button type="button" onClick={() => loadUploadRow(selectedUploadIndex)} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-extrabold text-white">Load Selected Item</button>
+                                        <button type="button" onClick={nextUploadItem} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold">Next Item</button>
+                                    </div>
+                                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                        <table className="w-full min-w-[900px] text-xs">
+                                            <thead className="bg-slate-50">{uploadHeaders.slice(0, 8).map(header => <th key={header} className="p-2 text-left">{header}</th>)}</thead>
+                                            <tbody>
+                                                {uploadRows.slice(0, 8).map((row, index) => (
+                                                    <tr key={index} onClick={() => setSelectedUploadIndex(index)} className={`cursor-pointer border-t border-slate-100 ${selectedUploadIndex === index ? "bg-blue-50" : ""}`}>
+                                                        {uploadHeaders.slice(0, 8).map(header => <td key={header} className="p-2">{row[header]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p className="text-xs text-slate-500">Missing fields should be confirmed manually after loading an item. The system guides costing but does not assume final rates.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                     {isProcessingOpen && (
                         <ProcessingCostModal
                             values={processingDetails}
@@ -1165,13 +1658,20 @@
                             onChange={setProcessingField}
                             onClose={() => setProcessingOpen(false)}
                             total={processingTotal}
+                            notes={processingNotes}
+                            onNotesChange={setProcessingNotes}
+                            presetName={presetName}
+                            setPresetName={setPresetName}
+                            presets={processingPresets}
+                            onSavePreset={savePreset}
+                            onApplyPreset={applyPreset}
                         />
                     )}
                 </div>
             );
         };
 
-        const ProcessingCostModal = ({ values, labels, onChange, onClose, total }) => (
+        const ProcessingCostModal = ({ values, labels, onChange, onClose, total, notes, onNotesChange, presetName, setPresetName, presets, onSavePreset, onApplyPreset }) => (
             <div className="fixed inset-0 z-[70] bg-slate-950/70 p-4 flex items-center justify-center" onClick={onClose}>
                 <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-5">
@@ -1196,6 +1696,25 @@
                         <div className="mt-5 rounded-lg bg-slate-900 p-4 text-white flex items-center justify-between gap-4">
                             <span className="font-extrabold">Processing total</span>
                             <span className="text-2xl font-extrabold">₹{Number(total || 0).toFixed(2)}</span>
+                        </div>
+                        <label className="block mt-5">
+                            <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Processing Notes</span>
+                            <textarea value={notes} onChange={(e) => onNotesChange(e.target.value)} rows="3" className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none focus:border-blue-500" placeholder="Operation notes, drawing remarks, assumptions..."></textarea>
+                        </label>
+                        <div className="grid sm:grid-cols-[1fr_160px] gap-3 mt-4">
+                            <input value={presetName} onChange={(e) => setPresetName(e.target.value)} className="rounded-md border border-slate-200 px-3 py-2 outline-none focus:border-blue-500" placeholder="Preset name e.g. Solar mounting plate" />
+                            <button type="button" onClick={onSavePreset} className="rounded-md border border-slate-300 px-3 py-2 font-extrabold text-slate-700 hover:bg-slate-50">Save as preset</button>
+                        </div>
+                        <div className="mt-3">
+                            <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Apply preset</span>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {["Simple cut", "Electrical panel cut", "Heavy drilling", "Solar mounting plate", "FRP panel cutting"].map(name => (
+                                    <button key={name} type="button" onClick={() => onApplyPreset(name)} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50">{name}</button>
+                                ))}
+                                {presets.map(preset => (
+                                    <button key={preset.name} type="button" onClick={() => onApplyPreset(preset.name)} className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-bold text-blue-800">{preset.name}</button>
+                                ))}
+                            </div>
                         </div>
                         <button type="button" onClick={onClose} className="mt-5 w-full rounded-md bg-blue-700 px-4 py-3 font-extrabold text-white hover:bg-blue-600">Done</button>
                     </div>
