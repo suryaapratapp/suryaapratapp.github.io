@@ -56,12 +56,66 @@
         .modal-backdrop { background: rgba(15, 23, 42, 0.68); }
         .particle-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
         .particle-canvas { width: 100%; height: 100%; display: block; opacity: 0.44; }
+        .signature-mark {
+            font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
+            letter-spacing: 0;
+        }
         @media (prefers-reduced-motion: reduce) {
             .particle-canvas { opacity: 0.14; }
         }
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
         @media print {
             nav, footer, .no-print { display: none !important; }
+            body { background: #ffffff !important; }
             main { padding-top: 0 !important; }
+            .print-page-wrap { padding: 0 !important; background: #ffffff !important; min-height: 0 !important; }
+            .print-document { width: 100% !important; max-width: 100% !important; margin: 0 !important; box-shadow: none !important; border: 0 !important; }
+            .payslip-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 10px !important;
+                line-height: 1.25 !important;
+            }
+            .payslip-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .payslip-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .payslip-print-header { padding: 5mm !important; }
+            .payslip-print-body { padding: 5mm !important; }
+            .payslip-header-row, .payslip-top-row, .payslip-net-bar {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+            .payslip-info-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 2.5mm !important; }
+            .payslip-info-grid > div { padding: 2mm !important; }
+            .payslip-amount-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 3mm !important; }
+            .payslip-print-section { margin-top: 4mm !important; }
+            .payslip-print-table th, .payslip-print-table td { padding: 2mm 3mm !important; }
+            .payslip-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .payslip-net-bar { margin-top: 4mm !important; padding: 4mm !important; }
+            .payslip-print-notes { margin-top: 4mm !important; grid-template-columns: 1fr 60mm !important; }
+            .payslip-print-document .signature-mark { font-size: 20px !important; }
+            .payslip-print-document .text-4xl { font-size: 20px !important; line-height: 1.05 !important; }
+            .payslip-print-document .text-3xl { font-size: 18px !important; line-height: 1.1 !important; }
+            .payslip-print-document .text-2xl { font-size: 15px !important; line-height: 1.15 !important; }
+            .payslip-print-document .text-xl { font-size: 13px !important; line-height: 1.2 !important; }
+            .payslip-print-document .text-sm { font-size: 10px !important; }
+            .payslip-print-document .text-xs { font-size: 9px !important; }
+            .payslip-print-document .text-\[10px\] { font-size: 8px !important; }
         }
     </style>
 </head>
@@ -238,6 +292,12 @@
         const INDUSTRIES_SERVED = ["Electrical & Switchgear", "Solar & Renewable Energy", "Railway & Signalling", "EV & Charging Equipment", "Automobile Components", "Industrial Machinery", "Display & Fabrication", "Custom Engineering Parts"];
         const INDUSTRY_COPY = "From electrical insulation plates to custom cut mounting components, KD Enterprises supports manufacturers, panel builders, solar suppliers, railway contractors, EV equipment makers and industrial workshops with reliable plastic sheet materials and customised components.";
         const WHY_CHOOSE = ["Drawing/sample-based supply", "Custom cutting and drilling", "Industrial material knowledge", "Batch-wise supply", "Practical support for manufacturing requirements", "Reliable enquiry and quotation process"];
+        const ADMIN_AUTH_KEY = "kd_calc_auth";
+        const ADMIN_TOOLS = [
+            { key: "Calculator", label: "Internal Calculator", title: "KD Internal Pricing Calculator", icon: "calculator" },
+            { key: "Payslip", label: "Payslip Template", title: "Editable Payslip Template", icon: "receipt-text" },
+            { key: "PDIR", label: "Generate PDIR", title: "PDIR Generator", icon: "clipboard-check" }
+        ];
 
         const Icon = ({ name, className = "" }) => <i data-lucide={name} className={className}></i>;
 
@@ -393,13 +453,21 @@
         };
 
         const Navigation = ({ activeTab, setTab, isMobileMenuOpen, setMobileMenuOpen }) => {
-            const navItems = ["Home", "Products", "About", "Team", "Calculator", "Contact"];
-            const navLabel = (item) => item === "Calculator" ? "Internal Calculator" : item;
+            useLucide();
+            const [isAdminOpen, setAdminOpen] = useState(false);
+            const navItems = ["Home", "Products", "About", "Team", "Contact"];
+            const adminKeys = ADMIN_TOOLS.map(tool => tool.key);
+            const isAdminActive = adminKeys.includes(activeTab);
+            const chooseTab = (item) => {
+                setTab(item);
+                setAdminOpen(false);
+                setMobileMenuOpen(false);
+            };
             return (
                 <nav className="fixed w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm no-print">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between h-20 items-center">
-                            <button className="flex items-center text-left" onClick={() => setTab("Home")}>
+                            <button className="flex items-center text-left" onClick={() => chooseTab("Home")}>
                                 <KDLogo className="w-11 h-11 mr-3 text-sm" />
                                 <div>
                                     <h1 className="text-xl md:text-2xl font-extrabold text-slate-950 leading-none">KD Enterprises</h1>
@@ -408,10 +476,25 @@
                             </button>
                             <div className="hidden md:flex gap-7 items-center">
                                 {navItems.map(item => (
-                                    <button key={item} onClick={() => setTab(item)} className={`text-sm font-extrabold transition ${activeTab === item ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>
-                                        {navLabel(item)}
+                                    <button key={item} onClick={() => chooseTab(item)} className={`text-sm font-extrabold transition ${activeTab === item ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>
+                                        {item}
                                     </button>
                                 ))}
+                                <div className="relative">
+                                    <button type="button" onClick={() => setAdminOpen(prev => !prev)} className={`text-sm font-extrabold transition inline-flex items-center gap-1.5 ${isAdminActive ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>
+                                        Admin Access <Icon name="chevron-down" className="w-4 h-4" />
+                                    </button>
+                                    {isAdminOpen && (
+                                        <div className="absolute right-0 top-full mt-3 w-64 rounded-lg border border-slate-200 bg-white shadow-2xl p-2">
+                                            {ADMIN_TOOLS.map(tool => (
+                                                <button key={tool.key} type="button" onClick={() => chooseTab(tool.key)} className={`w-full rounded-md px-3 py-3 text-left flex items-center gap-3 ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}>
+                                                    <Icon name={tool.icon} className="w-4 h-4" />
+                                                    <span className="text-sm font-extrabold">{tool.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-slate-700">
                                 <Icon name={isMobileMenuOpen ? "x" : "menu"} className="w-6 h-6" />
@@ -422,10 +505,18 @@
                         <div className="md:hidden bg-white border-t border-slate-100 shadow-xl">
                             <div className="px-4 py-4 space-y-1">
                                 {navItems.map(item => (
-                                    <button key={item} onClick={() => { setTab(item); setMobileMenuOpen(false); }} className={`block w-full text-left px-4 py-3 rounded-md font-bold ${activeTab === item ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
-                                        {navLabel(item)}
+                                    <button key={item} onClick={() => chooseTab(item)} className={`block w-full text-left px-4 py-3 rounded-md font-bold ${activeTab === item ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
+                                        {item}
                                     </button>
                                 ))}
+                                <div className="pt-3 mt-3 border-t border-slate-100">
+                                    <p className="px-4 pb-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-400">Admin Access</p>
+                                    {ADMIN_TOOLS.map(tool => (
+                                        <button key={tool.key} onClick={() => chooseTab(tool.key)} className={`flex w-full items-center gap-3 px-4 py-3 rounded-md font-bold ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
+                                            <Icon name={tool.icon} className="w-4 h-4" /> {tool.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -653,11 +744,150 @@
             </label>
         );
 
-        const CalculatorSection = () => {
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
+        const toAmount = value => Number(value || 0);
+        const formatCurrency = value => `₹${toAmount(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const formatDate = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+
+        const numberToWordsIndian = (value) => {
+            const amount = Math.round(toAmount(value));
+            if (!amount) return "Zero Rupees Only";
+            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+            const belowHundred = num => num < 20 ? ones[num] : `${tens[Math.floor(num / 10)]}${num % 10 ? ` ${ones[num % 10]}` : ""}`;
+            const belowThousand = num => {
+                const hundred = Math.floor(num / 100);
+                const rest = num % 100;
+                return `${hundred ? `${ones[hundred]} Hundred` : ""}${hundred && rest ? " " : ""}${rest ? belowHundred(rest) : ""}`.trim();
+            };
+            const parts = [
+                [10000000, "Crore"],
+                [100000, "Lakh"],
+                [1000, "Thousand"],
+                [1, ""]
+            ];
+            let remaining = amount;
+            const words = [];
+            parts.forEach(([divisor, label]) => {
+                const count = Math.floor(remaining / divisor);
+                if (count) {
+                    words.push(`${belowThousand(count)} ${label}`.trim());
+                    remaining %= divisor;
+                }
+            });
+            return `Rupees ${words.join(" ")} Only`;
+        };
+
+        const hashInput = async (value) => {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(value);
+            const buffer = await crypto.subtle.digest("SHA-256", data);
+            return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+        };
+
+        const verifyInternalEntry = async (value) => {
+            const digestParts = [
+                "c4589a15fb278bc8",
+                "8f8c69ca5c8264a9",
+                "5fa50b996ed14605",
+                "80daa0c8437bbb4a"
+            ];
+            return await hashInput(value) === digestParts.join("");
+        };
+
+        const AdminGate = ({ toolTitle, toolSubtitle, children }) => {
+            useLucide();
+            const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === "true");
             const [password, setPassword] = useState("");
             const [error, setError] = useState("");
             const [isChecking, setIsChecking] = useState(false);
+            const passwordRef = useRef(null);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                if (isChecking) return;
+                const enteredPassword = ((passwordRef.current && passwordRef.current.value) || password).trim();
+                setIsChecking(true);
+                const isValid = await verifyInternalEntry(enteredPassword);
+                if (isValid) {
+                    sessionStorage.setItem(ADMIN_AUTH_KEY, "true");
+                    setIsAuthenticated(true);
+                    setError("");
+                } else {
+                    setError("Incorrect password");
+                    setTimeout(() => setIsChecking(false), 1400);
+                    return;
+                }
+                setIsChecking(false);
+            };
+
+            if (isAuthenticated) return children;
+
+            return (
+                <div className="pt-32 pb-24 min-h-screen bg-slate-100 flex items-center justify-center px-4">
+                    <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full border border-slate-200">
+                        <div className="bg-blue-50 w-14 h-14 rounded-lg flex items-center justify-center text-blue-700 mb-5"><Icon name="lock" className="w-7 h-7" /></div>
+                        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-600 mb-2">Admin Access Only</p>
+                        <h2 className="text-2xl font-extrabold text-slate-950">{toolTitle}</h2>
+                        <p className="text-slate-500 mt-2">{toolSubtitle}</p>
+                        {/*
+                          NOTE:
+                          This is not secure authentication.
+                          This is only to hide internal tools from general users.
+                          For real security, backend authentication is required.
+                        */}
+                        <form onSubmit={handleLogin} className="space-y-4 mt-6">
+                            <input ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
+                            {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
+                            <button type="submit" disabled={isChecking} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
+                                {isChecking ? "Checking..." : "Unlock Admin Tool"} <Icon name="lock-open" className="w-4 h-4" />
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminField = ({ label, value, onChange, type = "text", rows, suffix }) => (
+            <label className="block">
+                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">{label}</span>
+                <div className="mt-1 flex rounded-md border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500">
+                    {rows ? (
+                        <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 outline-none resize-y" />
+                    ) : (
+                        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 outline-none" />
+                    )}
+                    {suffix && <span className="px-3 py-2.5 bg-slate-50 text-slate-500 text-sm font-bold border-l border-slate-200">{suffix}</span>}
+                </div>
+            </label>
+        );
+
+        const LineItemEditor = ({ title, items, setItems, amountLabel = "Amount" }) => {
+            const updateItem = (index, field, value) => {
+                setItems(prev => prev.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
+            };
+            const addItem = () => setItems(prev => [...prev, { label: "New item", amount: 0 }]);
+            const removeItem = index => setItems(prev => prev.filter((_, itemIndex) => itemIndex !== index));
+
+            return (
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <h3 className="font-extrabold text-slate-950">{title}</h3>
+                        <button type="button" onClick={addItem} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add</button>
+                    </div>
+                    <div className="space-y-3">
+                        {items.map((item, index) => (
+                            <div key={index} className="grid grid-cols-[1fr_130px_34px] gap-2">
+                                <input value={item.label} onChange={(e) => updateItem(index, "label", e.target.value)} className="rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                                <input type="number" value={item.amount} onChange={(e) => updateItem(index, "amount", e.target.value)} aria-label={amountLabel} className="rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                                <button type="button" onClick={() => removeItem(index)} className="rounded-md border border-red-200 text-red-700 hover:bg-red-50 flex items-center justify-center" aria-label="Remove item"><Icon name="x" className="w-4 h-4" /></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const CalculatorSection = () => {
             const [isProcessingOpen, setProcessingOpen] = useState(false);
             const [calculatedItems, setCalculatedItems] = useState([]);
             const [itemSearch, setItemSearch] = useState("");
@@ -674,7 +904,6 @@
                     return [];
                 }
             });
-            const passwordRef = useRef(null);
             const firstSheet = MATERIAL_SIZES["Bakelite / Phenolic Sheet"][0];
             const [inputs, setInputs] = useState({
                 product: "Bakelite / Phenolic Sheet",
@@ -767,45 +996,6 @@
                 setProcessingDetails(preset.values);
                 setProcessingNotes(preset.notes || "");
             };
-            const hashInput = async (value) => {
-                const encoder = new TextEncoder();
-                const data = encoder.encode(value);
-                const buffer = await crypto.subtle.digest("SHA-256", data);
-                return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, "0")).join("");
-            };
-            const verifyInternalEntry = async (value) => {
-                const digestParts = [
-                    "c4589a15fb278bc8",
-                    "8f8c69ca5c8264a9",
-                    "5fa50b996ed14605",
-                    "80daa0c8437bbb4a"
-                ];
-                return await hashInput(value) === digestParts.join("");
-            };
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                if (isChecking) return;
-                const inputElement = document.getElementById("kd-calc-entry");
-                const enteredPassword = ((inputElement && inputElement.value) || (passwordRef.current && passwordRef.current.value) || password).trim();
-                setIsChecking(true);
-                const isValid = await verifyInternalEntry(enteredPassword);
-                if (isValid) {
-                    sessionStorage.setItem("kd_calc_auth", "true");
-                    setIsAuthenticated(true);
-                    setError("");
-                } else {
-                    setError("Incorrect password");
-                    setTimeout(() => setIsChecking(false), 2000);
-                    return;
-                }
-                setIsChecking(false);
-            };
-
-            useEffect(() => {
-                if (sessionStorage.getItem("kd_calc_auth") === "true") {
-                    setIsAuthenticated(true);
-                }
-            }, []);
 
             const handleProductChange = (value) => {
                 const firstSize = MATERIAL_SIZES[value][0];
@@ -938,17 +1128,15 @@
             };
 
             useEffect(() => {
-                if (!isAuthenticated) return;
                 const timer = setTimeout(() => calculate(), 150);
                 return () => clearTimeout(timer);
-            }, [isAuthenticated]);
+            }, []);
 
             useEffect(() => {
                 setInputs(prev => ({ ...prev, processingCost: processingTotal }));
             }, [processingTotal]);
 
             useEffect(() => {
-                if (!isAuthenticated) return;
                 const requiredValues = [inputs.vLen, inputs.vWid, inputs.cLen, inputs.cWid, inputs.rawPrice].map(Number);
                 if (requiredValues.some(value => !value || value <= 0)) return;
                 const timer = setTimeout(() => calculate(), 250);
@@ -1417,31 +1605,6 @@
                 })));
             };
 
-            if (!isAuthenticated) {
-                return (
-                    <div className="pt-32 pb-24 min-h-screen bg-slate-100 flex items-center justify-center px-4">
-                        <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full border border-slate-200">
-                            <div className="bg-blue-50 w-14 h-14 rounded-lg flex items-center justify-center text-blue-700 mb-5"><Icon name="lock" className="w-7 h-7" /></div>
-                            <h2 className="text-2xl font-extrabold text-slate-950">KD Internal Pricing Calculator</h2>
-                            <p className="text-slate-500 mt-2">For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity.</p>
-                            {/*
-                              NOTE:
-                              This is NOT secure authentication.
-                              This is only to hide internal calculator from general users.
-                              For real security, backend authentication is required.
-                            */}
-                            <form onSubmit={handleLogin} className="space-y-4 mt-6">
-                                <input id="kd-calc-entry" ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
-                                {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
-                                <button type="button" disabled={isChecking} onClick={handleLogin} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
-                                    {isChecking ? "Checking..." : "Unlock Calculator"} <Icon name="lock-open" className="w-4 h-4" />
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                );
-            }
-
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen">
                     <SectionTitle eyebrow="KD Internal Team Only" title="KD Internal Pricing Calculator" subtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity." />
@@ -1727,6 +1890,474 @@
             );
         };
 
+        const DEFAULT_PAYSLIP_DECLARATION = "This salary slip has been prepared from KD Enterprises payroll records for the stated pay period. Amounts are subject to internal payroll verification and applicable statutory adjustments. For confirmation or verification, please contact sales@kd-enterprises.co.in.";
+        const OLD_PAYSLIP_DECLARATION = "This is a computer-generated payslip for payroll records.";
+
+        const createDefaultPayslipDraft = () => ({
+            details: {
+                companyName: "KD Enterprises",
+                companyAddress: "St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India",
+                companyEmail: "sales@kd-enterprises.co.in",
+                companyGst: "06AGYPD8145K1ZT",
+                payslipNo: `KD-PAY-${new Date().getFullYear()}-001`,
+                employeeName: "Employee Name",
+                employeeId: "KD-EMP-001",
+                dateOfBirth: "",
+                aadhaarNo: "",
+                designation: "Designation",
+                department: "Operations",
+                location: "Faridabad",
+                payPeriod: "June 2026",
+                payDate: "2026-06-30",
+                paidDays: 26,
+                workingDays: 26,
+                leaveDays: 0,
+                notes: DEFAULT_PAYSLIP_DECLARATION
+            },
+            earnings: [
+                { label: "Basic Salary", amount: 25000 },
+                { label: "House Rent Allowance", amount: 10000 },
+                { label: "Conveyance Allowance", amount: 2500 },
+                { label: "Other Allowance", amount: 2500 }
+            ],
+            deductions: [
+                { label: "Provident Fund", amount: 1800 },
+                { label: "ESI / Insurance", amount: 0 },
+                { label: "TDS", amount: 0 },
+                { label: "Advance / Loan", amount: 0 }
+            ]
+        });
+
+        const normalisePayslipDraft = (draft) => {
+            const defaults = createDefaultPayslipDraft();
+            const details = { ...defaults.details, ...(draft && draft.details ? draft.details : {}) };
+            if (!details.notes || details.notes === OLD_PAYSLIP_DECLARATION) {
+                details.notes = DEFAULT_PAYSLIP_DECLARATION;
+            }
+            return {
+                details,
+                earnings: Array.isArray(draft && draft.earnings) ? draft.earnings : defaults.earnings,
+                deductions: Array.isArray(draft && draft.deductions) ? draft.deductions : defaults.deductions
+            };
+        };
+
+        const PayslipSection = () => {
+            useLucide();
+            const [draft, setDraft] = useState(() => {
+                try {
+                    return normalisePayslipDraft(JSON.parse(localStorage.getItem("kd_payslip_draft") || "null"));
+                } catch (error) {
+                    return createDefaultPayslipDraft();
+                }
+            });
+            const { details, earnings, deductions } = draft;
+            const grossPay = earnings.reduce((sum, item) => sum + toAmount(item.amount), 0);
+            const deductionTotal = deductions.reduce((sum, item) => sum + toAmount(item.amount), 0);
+            const netPay = Math.max(0, grossPay - deductionTotal);
+            const visibleEarnings = earnings.filter(item => toAmount(item.amount) !== 0);
+            const visibleDeductions = deductions.filter(item => toAmount(item.amount) !== 0);
+            const updateDetail = (field, value) => setDraft(prev => ({ ...prev, details: { ...prev.details, [field]: value } }));
+            const setEarnings = updater => setDraft(prev => ({ ...prev, earnings: typeof updater === "function" ? updater(prev.earnings) : updater }));
+            const setDeductions = updater => setDraft(prev => ({ ...prev, deductions: typeof updater === "function" ? updater(prev.deductions) : updater }));
+            const saveDraft = () => localStorage.setItem("kd_payslip_draft", JSON.stringify(draft));
+            const resetDraft = () => setDraft(createDefaultPayslipDraft());
+
+            return (
+                <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
+                    <div className="no-print">
+                        <SectionTitle eyebrow="Admin Access Only" title="Editable Payslip Template" subtitle="Clean payroll format with editable employee details, earnings, deductions and a print-ready payslip preview." />
+                    </div>
+                    <div className="payslip-page-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[430px_1fr] gap-6">
+                        <div className="space-y-5 no-print">
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                    <div>
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">Payslip</p>
+                                        <h3 className="text-xl font-extrabold text-slate-950">Template Details</h3>
+                                    </div>
+                                    <Tag tone="blue">Editable</Tag>
+                                </div>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Payslip No." value={details.payslipNo} onChange={(value) => updateDetail("payslipNo", value)} />
+                                    <AdminField label="Pay Date" type="date" value={details.payDate} onChange={(value) => updateDetail("payDate", value)} />
+                                    <AdminField label="Pay Period" value={details.payPeriod} onChange={(value) => updateDetail("payPeriod", value)} />
+                                    <AdminField label="Location" value={details.location} onChange={(value) => updateDetail("location", value)} />
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    <AdminField label="Company Name" value={details.companyName} onChange={(value) => updateDetail("companyName", value)} />
+                                    <AdminField label="Company Address" rows="2" value={details.companyAddress} onChange={(value) => updateDetail("companyAddress", value)} />
+                                    <AdminField label="Company Email" value={details.companyEmail} onChange={(value) => updateDetail("companyEmail", value)} />
+                                    <AdminField label="Company GST No." value={details.companyGst} onChange={(value) => updateDetail("companyGst", value)} />
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-extrabold text-lg text-slate-950 mb-4">Employee Details</h3>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Employee Name" value={details.employeeName} onChange={(value) => updateDetail("employeeName", value)} />
+                                    <AdminField label="Employee ID" value={details.employeeId} onChange={(value) => updateDetail("employeeId", value)} />
+                                    <AdminField label="Date of Birth" type="date" value={details.dateOfBirth} onChange={(value) => updateDetail("dateOfBirth", value)} />
+                                    <AdminField label="Aadhaar Card No." value={details.aadhaarNo} onChange={(value) => updateDetail("aadhaarNo", value)} />
+                                    <AdminField label="Designation" value={details.designation} onChange={(value) => updateDetail("designation", value)} />
+                                    <AdminField label="Department" value={details.department} onChange={(value) => updateDetail("department", value)} />
+                                    <AdminField label="Paid Days" type="number" value={details.paidDays} onChange={(value) => updateDetail("paidDays", value)} />
+                                    <AdminField label="Working Days" type="number" value={details.workingDays} onChange={(value) => updateDetail("workingDays", value)} />
+                                    <AdminField label="Leave Days" type="number" value={details.leaveDays} onChange={(value) => updateDetail("leaveDays", value)} />
+                                </div>
+                            </div>
+
+                            <LineItemEditor title="Earnings" items={earnings} setItems={setEarnings} />
+                            <LineItemEditor title="Deductions" items={deductions} setItems={setDeductions} />
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
+                                <AdminField label="Notes" rows="3" value={details.notes} onChange={(value) => updateDetail("notes", value)} />
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <button type="button" onClick={saveDraft} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Save Draft</button>
+                                    <button type="button" onClick={() => window.print()} className="rounded-md bg-blue-700 px-4 py-3 text-sm font-extrabold text-white hover:bg-blue-600">Print / PDF</button>
+                                    <button type="button" onClick={resetDraft} className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-document payslip-print-document bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+                            <div className="payslip-print-header bg-white border-b-4 border-slate-950 p-7">
+                                <div className="payslip-header-row flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                                    <div className="flex items-start gap-4">
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 shrink-0"><KDLogo className="w-14 h-14" /></div>
+                                        <div>
+                                            <h2 className="text-3xl font-extrabold text-slate-950 leading-tight">{details.companyName}</h2>
+                                            <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{details.companyAddress}</p>
+                                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                                <span>Email: {details.companyEmail}</span>
+                                                <span>GSTIN: {details.companyGst}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 min-w-[210px] md:text-right">
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-blue-700">Salary Slip</p>
+                                        <p className="text-2xl font-extrabold text-slate-950 mt-2">{details.payPeriod}</p>
+                                        <p className="text-sm font-bold text-slate-500 mt-1">{details.payslipNo}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="payslip-print-body p-7">
+                                <div className="payslip-top-row flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
+                                    <div>
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-amber-600">Employee & Payroll Details</p>
+                                        <h3 className="text-xl font-extrabold text-slate-950 mt-1">{details.employeeName}</h3>
+                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
+                                            <span>DOB: {formatDate(details.dateOfBirth) || "-"}</span>
+                                            <span>Aadhaar: {details.aadhaarNo || "-"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right text-sm">
+                                        <p className="font-extrabold text-slate-950">Pay Date: {formatDate(details.payDate)}</p>
+                                        <p className="text-slate-500 font-bold mt-1">{details.location}</p>
+                                    </div>
+                                </div>
+
+                                <div className="payslip-info-grid grid md:grid-cols-4 gap-3 mt-5 text-sm">
+                                    {[
+                                        ["Employee ID", details.employeeId],
+                                        ["Date of Birth", formatDate(details.dateOfBirth) || "-"],
+                                        ["Aadhaar No.", details.aadhaarNo || "-"],
+                                        ["Designation", details.designation],
+                                        ["Department", details.department],
+                                        ["Paid Days", `${details.paidDays || 0} days`],
+                                        ["Working Days", `${details.workingDays || 0} days`],
+                                        ["Leave Days", `${details.leaveDays || 0} days`],
+                                        ["Pay Period", details.payPeriod],
+                                        ["Payslip No.", details.payslipNo],
+                                        ["Work Location", details.location]
+                                    ].map(([label, value]) => (
+                                        <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                                            <p className="mt-1 font-extrabold text-slate-950 break-words">{value}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="payslip-print-section payslip-amount-grid grid md:grid-cols-2 gap-5 mt-6">
+                                    <div className={`rounded-lg border border-slate-200 overflow-hidden ${visibleDeductions.length ? "" : "md:col-span-2"}`}>
+                                        <div className="bg-blue-50 px-4 py-3 flex items-center justify-between gap-3">
+                                            <span className="font-extrabold text-blue-900">Earnings</span>
+                                            <span className="text-xs font-extrabold text-blue-800">{formatCurrency(grossPay)}</span>
+                                        </div>
+                                        <table className="payslip-print-table w-full text-sm">
+                                            <tbody>
+                                                {visibleEarnings.map((item, index) => (
+                                                    <tr key={index} className="border-t border-slate-100"><td className="p-3 text-slate-600 font-semibold">{item.label}</td><td className="p-3 text-right font-extrabold text-slate-950">{formatCurrency(item.amount)}</td></tr>
+                                                ))}
+                                                <tr className="bg-slate-50"><td className="p-3 font-extrabold">Gross Pay</td><td className="p-3 text-right font-extrabold">{formatCurrency(grossPay)}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {visibleDeductions.length > 0 && (
+                                        <div className="rounded-lg border border-slate-200 overflow-hidden">
+                                            <div className="bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
+                                                <span className="font-extrabold text-amber-900">Deductions</span>
+                                                <span className="text-xs font-extrabold text-amber-800">{formatCurrency(deductionTotal)}</span>
+                                            </div>
+                                            <table className="payslip-print-table w-full text-sm">
+                                                <tbody>
+                                                    {visibleDeductions.map((item, index) => (
+                                                        <tr key={index} className="border-t border-slate-100"><td className="p-3 text-slate-600 font-semibold">{item.label}</td><td className="p-3 text-right font-extrabold text-slate-950">{formatCurrency(item.amount)}</td></tr>
+                                                    ))}
+                                                    <tr className="bg-slate-50"><td className="p-3 font-extrabold">Total Deductions</td><td className="p-3 text-right font-extrabold">{formatCurrency(deductionTotal)}</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="payslip-net-bar rounded-xl bg-slate-950 p-5 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-blue-200">Net Payable Salary</p>
+                                        <p className="text-sm text-slate-300 mt-1">{numberToWordsIndian(netPay)}</p>
+                                    </div>
+                                    <p className="text-3xl font-extrabold">{formatCurrency(netPay)}</p>
+                                </div>
+
+                                <div className="payslip-print-notes grid sm:grid-cols-[1fr_260px] gap-8 text-sm">
+                                    <div>
+                                        <p className="font-extrabold text-slate-950">Declaration</p>
+                                        <p className="text-slate-600 mt-2 leading-relaxed">{details.notes}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="inline-block min-w-[240px]">
+                                            <div className="signature-mark text-4xl text-slate-950 leading-none">Pankaj Sharma</div>
+                                            <div className="border-t border-slate-300 pt-3 mt-2">
+                                                <p className="font-extrabold text-slate-950">Pankaj Sharma</p>
+                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Authorised Signatory</p>
+                                                <p className="text-xs font-bold text-slate-500 mt-1">Head of Operations</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const createDefaultPDIRDraft = () => ({
+            details: {
+                companyName: "KD Enterprises",
+                companyAddress: "St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India",
+                reportNo: `KD-PDIR-${new Date().getFullYear()}-001`,
+                reportDate: new Date().toISOString().slice(0, 10),
+                customerName: "Customer Name",
+                poNo: "",
+                challanNo: "",
+                productName: "Custom Plastic Component",
+                material: "Bakelite / Phenolic Sheet",
+                drawingNo: "",
+                quantity: "",
+                batchNo: "",
+                inspectionLocation: "KD Enterprises, Faridabad",
+                inspectedBy: "",
+                approvedBy: "",
+                dispatchStatus: "Ready for dispatch",
+                remarks: "Material inspected as per available drawing/sample and dispatch checklist."
+            },
+            checks: [
+                { parameter: "Material verification", specification: "As per PO / drawing", observed: "Confirmed", result: "OK", remarks: "" },
+                { parameter: "Dimensions", specification: "As per drawing / sample", observed: "Within tolerance", result: "OK", remarks: "" },
+                { parameter: "Cutting / drilling finish", specification: "Clean finish, deburred edges", observed: "Accepted", result: "OK", remarks: "" },
+                { parameter: "Quantity check", specification: "As per order", observed: "Confirmed", result: "OK", remarks: "" },
+                { parameter: "Packing condition", specification: "Packed for safe dispatch", observed: "Accepted", result: "OK", remarks: "" }
+            ]
+        });
+
+        const PDIRSection = () => {
+            useLucide();
+            const resultOptions = ["OK", "Hold", "Rework", "N/A"];
+            const [draft, setDraft] = useState(() => {
+                try {
+                    return JSON.parse(localStorage.getItem("kd_pdir_draft") || "null") || createDefaultPDIRDraft();
+                } catch (error) {
+                    return createDefaultPDIRDraft();
+                }
+            });
+            const { details, checks } = draft;
+            const updateDetail = (field, value) => setDraft(prev => ({ ...prev, details: { ...prev.details, [field]: value } }));
+            const updateCheck = (index, field, value) => setDraft(prev => ({
+                ...prev,
+                checks: prev.checks.map((check, checkIndex) => checkIndex === index ? { ...check, [field]: value } : check)
+            }));
+            const addCheck = () => setDraft(prev => ({ ...prev, checks: [...prev.checks, { parameter: "New checkpoint", specification: "", observed: "", result: "OK", remarks: "" }] }));
+            const removeCheck = index => setDraft(prev => ({ ...prev, checks: prev.checks.filter((_, checkIndex) => checkIndex !== index) }));
+            const saveDraft = () => localStorage.setItem("kd_pdir_draft", JSON.stringify(draft));
+            const resetDraft = () => setDraft(createDefaultPDIRDraft());
+            const overallStatus = checks.some(check => ["Hold", "Rework"].includes(check.result)) ? "Hold for review" : "Approved for dispatch";
+
+            return (
+                <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
+                    <div className="no-print">
+                        <SectionTitle eyebrow="Admin Access Only" title="PDIR Generator" subtitle="Generate a clean Pre-Dispatch Inspection Report with editable inspection checkpoints and dispatch approval details." />
+                    </div>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[460px_1fr] gap-6">
+                        <div className="space-y-5 no-print">
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                    <div>
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">Pre-Dispatch</p>
+                                        <h3 className="text-xl font-extrabold text-slate-950">Report Details</h3>
+                                    </div>
+                                    <Tag tone={overallStatus === "Approved for dispatch" ? "blue" : "amber"}>{overallStatus}</Tag>
+                                </div>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="PDIR No." value={details.reportNo} onChange={(value) => updateDetail("reportNo", value)} />
+                                    <AdminField label="Report Date" type="date" value={details.reportDate} onChange={(value) => updateDetail("reportDate", value)} />
+                                    <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
+                                    <AdminField label="PO No." value={details.poNo} onChange={(value) => updateDetail("poNo", value)} />
+                                    <AdminField label="Challan No." value={details.challanNo} onChange={(value) => updateDetail("challanNo", value)} />
+                                    <AdminField label="Batch No." value={details.batchNo} onChange={(value) => updateDetail("batchNo", value)} />
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    <AdminField label="Product / Item" value={details.productName} onChange={(value) => updateDetail("productName", value)} />
+                                    <AdminField label="Material" value={details.material} onChange={(value) => updateDetail("material", value)} />
+                                    <div className="grid sm:grid-cols-2 gap-3">
+                                        <AdminField label="Drawing No." value={details.drawingNo} onChange={(value) => updateDetail("drawingNo", value)} />
+                                        <AdminField label="Quantity" value={details.quantity} onChange={(value) => updateDetail("quantity", value)} />
+                                    </div>
+                                    <AdminField label="Inspection Location" value={details.inspectionLocation} onChange={(value) => updateDetail("inspectionLocation", value)} />
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex items-center justify-between gap-3 mb-4">
+                                    <h3 className="font-extrabold text-lg text-slate-950">Inspection Checkpoints</h3>
+                                    <button type="button" onClick={addCheck} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add</button>
+                                </div>
+                                <div className="space-y-4">
+                                    {checks.map((check, index) => (
+                                        <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                            <div className="grid sm:grid-cols-2 gap-2">
+                                                <input value={check.parameter} onChange={(e) => updateCheck(index, "parameter", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Parameter" />
+                                                <input value={check.specification} onChange={(e) => updateCheck(index, "specification", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Specification" />
+                                                <input value={check.observed} onChange={(e) => updateCheck(index, "observed", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Observed" />
+                                                <select value={check.result} onChange={(e) => updateCheck(index, "result", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500">
+                                                    {resultOptions.map(option => <option key={option}>{option}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="grid grid-cols-[1fr_34px] gap-2 mt-2">
+                                                <input value={check.remarks} onChange={(e) => updateCheck(index, "remarks", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Remarks" />
+                                                <button type="button" onClick={() => removeCheck(index)} className="rounded-md border border-red-200 bg-white text-red-700 hover:bg-red-50 flex items-center justify-center" aria-label="Remove checkpoint"><Icon name="x" className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Inspected By" value={details.inspectedBy} onChange={(value) => updateDetail("inspectedBy", value)} />
+                                    <AdminField label="Approved By" value={details.approvedBy} onChange={(value) => updateDetail("approvedBy", value)} />
+                                </div>
+                                <AdminField label="Dispatch Status" value={details.dispatchStatus} onChange={(value) => updateDetail("dispatchStatus", value)} />
+                                <AdminField label="Remarks" rows="3" value={details.remarks} onChange={(value) => updateDetail("remarks", value)} />
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <button type="button" onClick={saveDraft} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Save Draft</button>
+                                    <button type="button" onClick={() => window.print()} className="rounded-md bg-blue-700 px-4 py-3 text-sm font-extrabold text-white hover:bg-blue-600">Print / PDF</button>
+                                    <button type="button" onClick={resetDraft} className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-document bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+                            <div className="bg-slate-950 text-white p-7">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-white rounded-lg p-2"><KDLogo className="w-12 h-12" /></div>
+                                        <div>
+                                            <h2 className="text-2xl font-extrabold">{details.companyName}</h2>
+                                            <p className="text-sm text-slate-300 mt-1 max-w-xl">{details.companyAddress}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-left sm:text-right">
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-blue-200">PDIR</p>
+                                        <p className="text-lg font-extrabold mt-2">Pre-Dispatch Inspection Report</p>
+                                        <p className="text-sm text-slate-300">{details.reportNo}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-7">
+                                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                                    <Metric label="Report Date" value={formatDate(details.reportDate)} />
+                                    <Metric label="Overall Status" value={overallStatus} highlight={overallStatus === "Approved for dispatch"} />
+                                    <Metric label="Dispatch Status" value={details.dispatchStatus || "-"} />
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-5">
+                                    <div className="rounded-lg border border-slate-200 overflow-hidden">
+                                        <div className="bg-slate-50 px-4 py-3 font-extrabold text-slate-950">Customer & Order</div>
+                                        <div className="divide-y divide-slate-100 text-sm">
+                                            <InfoRow label="Customer" value={details.customerName} />
+                                            <InfoRow label="PO No." value={details.poNo || "-"} />
+                                            <InfoRow label="Challan No." value={details.challanNo || "-"} />
+                                            <InfoRow label="Batch No." value={details.batchNo || "-"} />
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 overflow-hidden">
+                                        <div className="bg-slate-50 px-4 py-3 font-extrabold text-slate-950">Product Details</div>
+                                        <div className="divide-y divide-slate-100 text-sm">
+                                            <InfoRow label="Product / Item" value={details.productName} />
+                                            <InfoRow label="Material" value={details.material} />
+                                            <InfoRow label="Drawing No." value={details.drawingNo || "-"} />
+                                            <InfoRow label="Quantity" value={details.quantity || "-"} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 rounded-lg border border-slate-200 overflow-hidden">
+                                    <div className="bg-blue-50 px-4 py-3 font-extrabold text-blue-900">Inspection Results</div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[760px] text-sm">
+                                            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                                                <tr>
+                                                    {["Sr.", "Parameter", "Specification", "Observed", "Result", "Remarks"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {checks.map((check, index) => (
+                                                    <tr key={index} className="border-t border-slate-100">
+                                                        <td className="p-3 font-bold">{index + 1}</td>
+                                                        <td className="p-3">{check.parameter}</td>
+                                                        <td className="p-3">{check.specification || "-"}</td>
+                                                        <td className="p-3">{check.observed || "-"}</td>
+                                                        <td className="p-3"><span className={`rounded px-2 py-1 text-xs font-extrabold ${check.result === "OK" ? "bg-emerald-50 text-emerald-700" : check.result === "N/A" ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"}`}>{check.result}</span></td>
+                                                        <td className="p-3">{check.remarks || "-"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 rounded-xl bg-slate-50 border border-slate-200 p-5">
+                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-slate-500">Final Remarks</p>
+                                    <p className="text-slate-700 mt-2 leading-relaxed">{details.remarks}</p>
+                                </div>
+
+                                <div className="mt-8 grid sm:grid-cols-3 gap-6 text-sm">
+                                    <div>
+                                        <p className="text-slate-500 font-bold">Inspection Location</p>
+                                        <p className="font-extrabold text-slate-950 mt-1">{details.inspectionLocation}</p>
+                                    </div>
+                                    <div className="border-t border-slate-300 pt-3 mt-8 sm:mt-10 font-extrabold text-slate-950">Inspected By: {details.inspectedBy || ""}</div>
+                                    <div className="border-t border-slate-300 pt-3 mt-8 sm:mt-10 font-extrabold text-slate-950">Approved By: {details.approvedBy || ""}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const ProcessingCostModal = ({ values, labels, onChange, onClose, total, notes, onNotesChange, presetName, setPresetName, presets, onSavePreset, onApplyPreset }) => (
             <div className="fixed inset-0 z-[70] bg-slate-950/70 p-4 flex items-center justify-center" onClick={onClose}>
                 <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -1813,6 +2444,13 @@
                 <td className="p-3 text-slate-600 font-semibold">{label}</td>
                 <td className="p-3 text-right font-extrabold text-slate-950">{value}</td>
             </tr>
+        );
+
+        const InfoRow = ({ label, value }) => (
+            <div className="grid grid-cols-[132px_1fr] gap-3 p-3">
+                <span className="text-slate-600 font-semibold">{label}</span>
+                <span className="text-right font-extrabold text-slate-950">{value}</span>
+            </div>
         );
 
         const AboutUs = () => (
@@ -1967,7 +2605,7 @@
                             <div className="flex items-center gap-3 mb-4"><KDLogo className="w-9 h-9 text-sm" /><span className="text-xl font-extrabold">KD Enterprises</span></div>
                             <p className="text-slate-400 text-sm leading-relaxed">Industrial plastic sheets, processed components and custom fabrication support for B2B buyers.</p>
                         </div>
-                        <FooterList title="Quick Links" items={["Home", "Products", "About", "Calculator", "Contact"]} setTab={setTab} />
+                        <FooterList title="Quick Links" items={["Home", "Products", "About", "Contact"]} setTab={setTab} />
                         <div>
                             <h4 className="font-extrabold mb-4">Materials</h4>
                             <ul className="space-y-2 text-sm text-slate-400">
@@ -1992,7 +2630,7 @@
             <div>
                 <h4 className="font-extrabold mb-4">{title}</h4>
                 <ul className="space-y-2 text-sm text-slate-400">
-                    {items.map(item => <li key={item}><button onClick={() => setTab(item)} className="hover:text-white transition">{item === "Calculator" ? "Internal Calculator" : item}</button></li>)}
+                    {items.map(item => <li key={item}><button onClick={() => setTab(item)} className="hover:text-white transition">{item}</button></li>)}
                 </ul>
             </div>
         );
@@ -2009,6 +2647,7 @@
                 setQuoteMessage(`I am interested in ${product.title}. Please share quotation details for custom size/cut requirements.`);
                 setTab("Contact");
             };
+            const activeAdminTool = ADMIN_TOOLS.find(tool => tool.key === activeTab);
 
             return (
                 <div className="min-h-screen flex flex-col">
@@ -2018,7 +2657,9 @@
                         {activeTab === "Products" && <ProductGrid onQuote={requestQuote} />}
                         {activeTab === "About" && <AboutUs />}
                         {activeTab === "Team" && <TeamSection />}
-                        {activeTab === "Calculator" && <CalculatorSection />}
+                        {activeTab === "Calculator" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity."><CalculatorSection /></AdminGate>}
+                        {activeTab === "Payslip" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Create and print an editable employee payslip template for internal payroll records."><PayslipSection /></AdminGate>}
+                        {activeTab === "PDIR" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Generate a pre-dispatch inspection report for internal quality and dispatch records."><PDIRSection /></AdminGate>}
                         {activeTab === "Contact" && <ContactSection quoteMessage={quoteMessage} setQuoteMessage={setQuoteMessage} />}
                     </main>
                     <Footer setTab={setTab} />
