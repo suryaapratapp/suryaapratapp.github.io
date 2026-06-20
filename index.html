@@ -6,17 +6,17 @@
     <title>KD Enterprises | Industrial Plastic Sheets & Custom Components</title>
 
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 
     <!-- React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 
     <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js"></script>
 
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 
     <!-- jsPDF for internal calculator PDF export -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -116,13 +116,57 @@
             .payslip-print-document .text-sm { font-size: 10px !important; }
             .payslip-print-document .text-xs { font-size: 9px !important; }
             .payslip-print-document .text-\[10px\] { font-size: 8px !important; }
+            .pdir-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .pdir-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 9px !important;
+                line-height: 1.22 !important;
+            }
+            .pdir-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .pdir-print-header { padding: 4mm !important; }
+            .pdir-print-body { padding: 4mm !important; }
+            .pdir-header-row, .pdir-signature-grid {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+            .pdir-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 2mm !important; }
+            .pdir-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 2.5mm !important; }
+            .pdir-card { padding: 2mm !important; }
+            .pdir-print-table th, .pdir-print-table td { padding: 1.5mm 2mm !important; }
+            .pdir-print-table { min-width: 0 !important; table-layout: fixed !important; }
+            .pdir-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .pdir-print-section { margin-top: 3mm !important; }
+            .pdir-remarks { margin-top: 3mm !important; padding: 3mm !important; }
+            .pdir-signature-grid { margin-top: 4mm !important; }
+            .pdir-signature-card { min-width: 48mm !important; }
+            .pdir-print-document .pdir-signature-mark { font-size: 18px !important; min-height: 8mm !important; }
+            .pdir-print-document .text-3xl { font-size: 17px !important; line-height: 1.1 !important; }
+            .pdir-print-document .text-2xl { font-size: 14px !important; line-height: 1.15 !important; }
+            .pdir-print-document .text-xl { font-size: 12px !important; line-height: 1.18 !important; }
+            .pdir-print-document .text-lg { font-size: 11px !important; line-height: 1.2 !important; }
+            .pdir-print-document .text-sm { font-size: 9px !important; }
+            .pdir-print-document .text-xs { font-size: 8px !important; }
         }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
         const { useEffect, useMemo, useRef, useState } = React;
 
         const CUSTOMISATION_LIST = [
@@ -2146,6 +2190,8 @@
             details: {
                 companyName: "KD Enterprises",
                 companyAddress: "St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India",
+                companyEmail: "sales@kd-enterprises.co.in",
+                companyGst: "06AGYPD8145K1ZT",
                 reportNo: `KD-PDIR-${new Date().getFullYear()}-001`,
                 reportDate: new Date().toISOString().slice(0, 10),
                 customerName: "Customer Name",
@@ -2171,12 +2217,20 @@
             ]
         });
 
+        const normalisePDIRDraft = (draft) => {
+            const defaults = createDefaultPDIRDraft();
+            return {
+                details: { ...defaults.details, ...(draft && draft.details ? draft.details : {}) },
+                checks: Array.isArray(draft && draft.checks) ? draft.checks : defaults.checks
+            };
+        };
+
         const PDIRSection = () => {
             useLucide();
             const resultOptions = ["OK", "Hold", "Rework", "N/A"];
             const [draft, setDraft] = useState(() => {
                 try {
-                    return JSON.parse(localStorage.getItem("kd_pdir_draft") || "null") || createDefaultPDIRDraft();
+                    return normalisePDIRDraft(JSON.parse(localStorage.getItem("kd_pdir_draft") || "null"));
                 } catch (error) {
                     return createDefaultPDIRDraft();
                 }
@@ -2192,13 +2246,35 @@
             const saveDraft = () => localStorage.setItem("kd_pdir_draft", JSON.stringify(draft));
             const resetDraft = () => setDraft(createDefaultPDIRDraft());
             const overallStatus = checks.some(check => ["Hold", "Rework"].includes(check.result)) ? "Hold for review" : "Approved for dispatch";
+            const summaryCards = [
+                ["Report Date", formatDate(details.reportDate)],
+                ["PDIR No.", details.reportNo],
+                ["Overall Status", overallStatus],
+                ["Dispatch Status", details.dispatchStatus || "-"]
+            ];
+            const orderDetails = [
+                ["Customer", details.customerName],
+                ["PO No.", details.poNo || "-"],
+                ["Challan No.", details.challanNo || "-"],
+                ["Batch No.", details.batchNo || "-"]
+            ];
+            const productDetails = [
+                ["Product / Item", details.productName],
+                ["Material", details.material],
+                ["Drawing No.", details.drawingNo || "-"],
+                ["Quantity", details.quantity || "-"]
+            ];
+            const signatories = [
+                { label: "Inspected By", name: (details.inspectedBy || "").trim(), role: "Quality Inspection" },
+                { label: "Approved By", name: (details.approvedBy || "").trim(), role: "Dispatch Approval" }
+            ];
 
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
                     <div className="no-print">
                         <SectionTitle eyebrow="Admin Access Only" title="PDIR Generator" subtitle="Generate a clean Pre-Dispatch Inspection Report with editable inspection checkpoints and dispatch approval details." />
                     </div>
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[460px_1fr] gap-6">
+                    <div className="pdir-page-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[460px_1fr] gap-6">
                         <div className="space-y-5 no-print">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -2267,56 +2343,78 @@
                             </div>
                         </div>
 
-                        <div className="print-document bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-                            <div className="bg-slate-950 text-white p-7">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
-                                    <div className="flex items-center gap-4">
-                                        <div className="bg-white rounded-lg p-2"><KDLogo className="w-12 h-12" /></div>
+                        <div className="print-document pdir-print-document bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+                            <div className="pdir-print-header bg-white border-b-4 border-slate-950 p-7">
+                                <div className="pdir-header-row flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                                    <div className="flex items-start gap-4">
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 shrink-0"><KDLogo className="w-14 h-14" /></div>
                                         <div>
-                                            <h2 className="text-2xl font-extrabold">{details.companyName}</h2>
-                                            <p className="text-sm text-slate-300 mt-1 max-w-xl">{details.companyAddress}</p>
+                                            <h2 className="text-3xl font-extrabold text-slate-950 leading-tight">{details.companyName}</h2>
+                                            <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{details.companyAddress}</p>
+                                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                                <span>Email: {details.companyEmail}</span>
+                                                <span>GSTIN: {details.companyGst}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="text-left sm:text-right">
-                                        <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-blue-200">PDIR</p>
-                                        <p className="text-lg font-extrabold mt-2">Pre-Dispatch Inspection Report</p>
-                                        <p className="text-sm text-slate-300">{details.reportNo}</p>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 min-w-[240px] md:text-right">
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-blue-700">PDIR</p>
+                                        <p className="text-2xl font-extrabold text-slate-950 mt-2">Pre-Dispatch Inspection Report</p>
+                                        <p className="text-sm font-bold text-slate-500 mt-1">{details.reportNo}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-7">
-                                <div className="grid md:grid-cols-3 gap-4 mb-6">
-                                    <Metric label="Report Date" value={formatDate(details.reportDate)} />
-                                    <Metric label="Overall Status" value={overallStatus} highlight={overallStatus === "Approved for dispatch"} />
-                                    <Metric label="Dispatch Status" value={details.dispatchStatus || "-"} />
+                            <div className="pdir-print-body p-7">
+                                <div className="pdir-summary-grid grid md:grid-cols-4 gap-3">
+                                    {summaryCards.map(([label, value]) => (
+                                        <div key={label} className={`pdir-card rounded-lg border border-slate-200 p-3 ${label === "Overall Status" && overallStatus === "Approved for dispatch" ? "bg-blue-700 text-white" : "bg-slate-50 text-slate-950"}`}>
+                                            <p className={`text-[10px] font-extrabold uppercase tracking-[0.18em] ${label === "Overall Status" && overallStatus === "Approved for dispatch" ? "text-blue-100" : "text-slate-500"}`}>{label}</p>
+                                            <p className="mt-1 text-lg font-extrabold">{value}</p>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <div className="grid md:grid-cols-2 gap-5">
+                                <div className="pdir-print-section pdir-detail-grid grid md:grid-cols-2 gap-5 mt-6">
                                     <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-50 px-4 py-3 font-extrabold text-slate-950">Customer & Order</div>
-                                        <div className="divide-y divide-slate-100 text-sm">
-                                            <InfoRow label="Customer" value={details.customerName} />
-                                            <InfoRow label="PO No." value={details.poNo || "-"} />
-                                            <InfoRow label="Challan No." value={details.challanNo || "-"} />
-                                            <InfoRow label="Batch No." value={details.batchNo || "-"} />
+                                        <div className="bg-slate-950 px-4 py-3 font-extrabold text-white">Customer & Order</div>
+                                        <div className="grid sm:grid-cols-2 gap-0 text-sm">
+                                            {orderDetails.map(([label, value]) => (
+                                                <div key={label} className="pdir-card border-t border-slate-100 p-3">
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                                                    <p className="mt-1 font-extrabold text-slate-950 break-words">{value}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                     <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-50 px-4 py-3 font-extrabold text-slate-950">Product Details</div>
-                                        <div className="divide-y divide-slate-100 text-sm">
-                                            <InfoRow label="Product / Item" value={details.productName} />
-                                            <InfoRow label="Material" value={details.material} />
-                                            <InfoRow label="Drawing No." value={details.drawingNo || "-"} />
-                                            <InfoRow label="Quantity" value={details.quantity || "-"} />
+                                        <div className="bg-slate-950 px-4 py-3 font-extrabold text-white">Product Details</div>
+                                        <div className="grid sm:grid-cols-2 gap-0 text-sm">
+                                            {productDetails.map(([label, value]) => (
+                                                <div key={label} className="pdir-card border-t border-slate-100 p-3">
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                                                    <p className="mt-1 font-extrabold text-slate-950 break-words">{value}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="mt-6 rounded-lg border border-slate-200 overflow-hidden">
-                                    <div className="bg-blue-50 px-4 py-3 font-extrabold text-blue-900">Inspection Results</div>
+                                <div className="pdir-print-section rounded-lg border border-slate-200 overflow-hidden mt-6">
+                                    <div className="bg-blue-50 px-4 py-3 flex items-center justify-between gap-3">
+                                        <span className="font-extrabold text-blue-900">Inspection Results</span>
+                                        <span className="text-xs font-extrabold text-blue-800">{checks.length} checkpoints</span>
+                                    </div>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full min-w-[760px] text-sm">
+                                        <table className="pdir-print-table w-full text-sm">
+                                            <colgroup>
+                                                <col style={{ width: "6%" }} />
+                                                <col style={{ width: "21%" }} />
+                                                <col style={{ width: "24%" }} />
+                                                <col style={{ width: "18%" }} />
+                                                <col style={{ width: "10%" }} />
+                                                <col style={{ width: "21%" }} />
+                                            </colgroup>
                                             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                                                 <tr>
                                                     {["Sr.", "Parameter", "Specification", "Observed", "Result", "Remarks"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
@@ -2324,7 +2422,7 @@
                                             </thead>
                                             <tbody>
                                                 {checks.map((check, index) => (
-                                                    <tr key={index} className="border-t border-slate-100">
+                                                    <tr key={index} className="border-t border-slate-100 align-top">
                                                         <td className="p-3 font-bold">{index + 1}</td>
                                                         <td className="p-3">{check.parameter}</td>
                                                         <td className="p-3">{check.specification || "-"}</td>
@@ -2338,18 +2436,30 @@
                                     </div>
                                 </div>
 
-                                <div className="mt-6 rounded-xl bg-slate-50 border border-slate-200 p-5">
+                                <div className="pdir-remarks rounded-xl bg-slate-50 border border-slate-200 p-5">
                                     <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-slate-500">Final Remarks</p>
                                     <p className="text-slate-700 mt-2 leading-relaxed">{details.remarks}</p>
                                 </div>
 
-                                <div className="mt-8 grid sm:grid-cols-3 gap-6 text-sm">
+                                <div className="pdir-signature-grid mt-7 flex flex-col sm:flex-row gap-6 text-sm">
                                     <div>
                                         <p className="text-slate-500 font-bold">Inspection Location</p>
                                         <p className="font-extrabold text-slate-950 mt-1">{details.inspectionLocation}</p>
                                     </div>
-                                    <div className="border-t border-slate-300 pt-3 mt-8 sm:mt-10 font-extrabold text-slate-950">Inspected By: {details.inspectedBy || ""}</div>
-                                    <div className="border-t border-slate-300 pt-3 mt-8 sm:mt-10 font-extrabold text-slate-950">Approved By: {details.approvedBy || ""}</div>
+                                    <div className="grid sm:grid-cols-2 gap-6 sm:min-w-[420px]">
+                                        {signatories.map(signatory => (
+                                            <div key={signatory.label} className="pdir-signature-card">
+                                                <div className="pdir-signature-mark signature-mark min-h-[44px] text-3xl leading-none text-slate-950 flex items-end">
+                                                    {signatory.name}
+                                                </div>
+                                                <div className="border-t border-slate-300 pt-3 mt-2">
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{signatory.label}</p>
+                                                    <p className="font-extrabold text-slate-950 mt-1">{signatory.name || "-"}</p>
+                                                    <p className="text-xs font-bold text-slate-500 mt-1">{signatory.role}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
