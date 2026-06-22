@@ -65,23 +65,6 @@
             color: #111827;
             position: relative;
         }
-        .rmtc-watermark {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: "Times New Roman", Times, serif;
-            font-size: clamp(44px, 8vw, 94px);
-            font-weight: 700;
-            color: rgba(15, 23, 42, 0.045);
-            letter-spacing: 0.12em;
-            transform: rotate(-26deg);
-            pointer-events: none;
-            user-select: none;
-            z-index: 0;
-            text-align: center;
-        }
         .rmtc-document-content { position: relative; z-index: 1; }
         .rmtc-provider-name {
             font-family: "Times New Roman", Times, serif;
@@ -276,7 +259,6 @@
             .rmtc-print-table th, .rmtc-print-table td { padding: 1.1mm 1.5mm !important; font-size: 10px !important; }
             .rmtc-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
             .rmtc-note-box { margin-top: 4mm !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
-            .rmtc-watermark { font-size: 54px !important; color: rgba(15, 23, 42, 0.055) !important; }
             .rmtc-signature-name { font-size: 13px !important; min-height: 7mm !important; }
         }
     </style>
@@ -1010,14 +992,14 @@
             );
         };
 
-        const AdminField = ({ label, value, onChange, type = "text", rows, suffix }) => (
+        const AdminField = ({ label, value, onChange, type = "text", rows, suffix, min, max, step }) => (
             <label className="block">
                 <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">{label}</span>
                 <div className="mt-1 flex rounded-md border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500">
                     {rows ? (
                         <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 outline-none resize-y" />
                     ) : (
-                        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 outline-none" />
+                        <input type={type} min={min} max={max} step={step} value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2.5 outline-none" />
                     )}
                     {suffix && <span className="px-3 py-2.5 bg-slate-50 text-slate-500 text-sm font-bold border-l border-slate-200">{suffix}</span>}
                 </div>
@@ -2587,10 +2569,18 @@
             );
         };
 
-        const parseRMTCThickness = (value) => {
+        const RMTC_THICKNESS_RANGES = {
+            Bakelite: { min: 0.5, max: 80, fallback: 5 },
+            GlassEpoxy: { min: 2, max: 80, fallback: 5 }
+        };
+
+        const getRMTCThicknessRange = (materialKey) => RMTC_THICKNESS_RANGES[materialKey] || RMTC_THICKNESS_RANGES.Bakelite;
+
+        const parseRMTCThickness = (value, materialKey = "Bakelite") => {
+            const range = getRMTCThicknessRange(materialKey);
             const numeric = Number(String(value || "").replace(/[^\d.]/g, ""));
-            if (!Number.isFinite(numeric)) return 5;
-            return Math.min(80, Math.max(0.5, numeric));
+            if (!Number.isFinite(numeric)) return range.fallback;
+            return Math.min(range.max, Math.max(range.min, numeric));
         };
 
         const formatRMTCNumber = (value, decimals = 1) => {
@@ -2598,8 +2588,19 @@
             return fixed.replace(/\.0$/, "");
         };
 
+        const pickRMTCBandValue = (thickness, bands) => {
+            const band = bands.find(item => thickness <= item.max) || bands[bands.length - 1];
+            return band.value;
+        };
+
+        const getRMTCMaterialThicknessText = (value, materialKey) => {
+            const thickness = parseRMTCThickness(value, materialKey);
+            const decimals = Number.isInteger(thickness) ? 0 : 1;
+            return `${formatRMTCNumber(thickness, decimals)} MM`;
+        };
+
         const getBakeliteTolerance = (thicknessValue) => {
-            const thickness = parseRMTCThickness(thicknessValue);
+            const thickness = parseRMTCThickness(thicknessValue, "Bakelite");
             if (thickness <= 1) return "Thickness tolerance: +/- 0.10 mm.";
             if (thickness <= 3) return "Thickness tolerance: +/- 0.15 mm.";
             if (thickness <= 10) return "Thickness tolerance: +/- 0.25 mm.";
@@ -2609,18 +2610,81 @@
         };
 
         const getBakeliteAutoTests = (thicknessValue) => {
-            const thickness = parseRMTCThickness(thicknessValue);
-            const crossBreaking = Math.max(132.5, 138 - Math.min(thickness, 80) * 0.045);
-            const shear = Math.max(78.2, 82 - Math.min(thickness, 80) * 0.035);
-            const waterAbsorption = Math.min(245, 95 + thickness * 1.85);
-            const electricFlatwise = Math.max(6.5, 17.5 - thickness * 0.13);
+            const thickness = parseRMTCThickness(thicknessValue, "Bakelite");
+            const crossRequired = pickRMTCBandValue(thickness, [
+                { max: 1, value: 142 },
+                { max: 3, value: 136 },
+                { max: 10, value: 132 },
+                { max: 25, value: 125 },
+                { max: 50, value: 118 },
+                { max: 80, value: 110 }
+            ]);
+            const shearRequired = pickRMTCBandValue(thickness, [
+                { max: 1, value: 82 },
+                { max: 3, value: 79 },
+                { max: 10, value: 77.9 },
+                { max: 25, value: 74 },
+                { max: 50, value: 70 },
+                { max: 80, value: 66 }
+            ]);
+            const waterRequired = pickRMTCBandValue(thickness, [
+                { max: 1, value: 175 },
+                { max: 3, value: 220 },
+                { max: 10, value: 255 },
+                { max: 25, value: 320 },
+                { max: 50, value: 420 },
+                { max: 80, value: 520 }
+            ]);
+            const insulationRequired = pickRMTCBandValue(thickness, [
+                { max: 3, value: 22 },
+                { max: 10, value: 20 },
+                { max: 25, value: 18 },
+                { max: 50, value: 15 },
+                { max: 80, value: 12 }
+            ]);
+            const electricRequired = pickRMTCBandValue(thickness, [
+                { max: 1, value: 16 },
+                { max: 3, value: 14 },
+                { max: 10, value: 10 },
+                { max: 25, value: 8 },
+                { max: 50, value: 6.5 },
+                { max: 80, value: 5 }
+            ]);
             const specificGravity = thickness <= 10 ? "1.32" : thickness <= 30 ? "1.33" : "1.34";
+            const crossBreaking = crossRequired + pickRMTCBandValue(thickness, [
+                { max: 3, value: 2.6 },
+                { max: 10, value: 2.2 },
+                { max: 25, value: 1.8 },
+                { max: 50, value: 1.5 },
+                { max: 80, value: 1.2 }
+            ]);
+            const shear = shearRequired + pickRMTCBandValue(thickness, [
+                { max: 3, value: 1.8 },
+                { max: 10, value: 1.5 },
+                { max: 25, value: 1.2 },
+                { max: 50, value: 1 },
+                { max: 80, value: 0.8 }
+            ]);
+            const waterAbsorption = Math.max(95, waterRequired - pickRMTCBandValue(thickness, [
+                { max: 3, value: 35 },
+                { max: 10, value: 45 },
+                { max: 25, value: 55 },
+                { max: 50, value: 65 },
+                { max: 80, value: 75 }
+            ]));
+            const electricFlatwise = electricRequired + pickRMTCBandValue(thickness, [
+                { max: 3, value: 1.2 },
+                { max: 10, value: 1 },
+                { max: 25, value: 0.8 },
+                { max: 50, value: 0.6 },
+                { max: 80, value: 0.5 }
+            ]);
             return [
-                { property: "Cross Breaking Strength", unit: "MPa", observed: `${formatRMTCNumber(crossBreaking)} MIN`, required: "132 MIN" },
-                { property: "Shear Strength Flatwise", unit: "MPa", observed: `${formatRMTCNumber(shear)} MIN`, required: "77.9 MIN" },
-                { property: "Water absorption at 27 C", unit: "mg", observed: `${formatRMTCNumber(waterAbsorption)} mg`, required: "255 mg MAX" },
-                { property: "Insulation Resistance at 27 C", unit: "megaohms", observed: "25 megaohms MIN", required: "22 megaohms MIN" },
-                { property: "Electric Strength in oil at 90 C - Flatwise", unit: "MV/m", observed: `${formatRMTCNumber(electricFlatwise)} MIN`, required: "COMPLIES" },
+                { property: "Cross Breaking Strength", unit: "MPa", observed: `${formatRMTCNumber(crossBreaking)} MIN`, required: `${formatRMTCNumber(crossRequired)} MIN` },
+                { property: "Shear Strength Flatwise", unit: "MPa", observed: `${formatRMTCNumber(shear)} MIN`, required: `${formatRMTCNumber(shearRequired)} MIN` },
+                { property: "Water absorption at 27 C", unit: "mg", observed: `${formatRMTCNumber(waterAbsorption)} mg`, required: `${formatRMTCNumber(waterRequired)} mg MAX` },
+                { property: "Insulation Resistance at 27 C", unit: "megaohms", observed: `${formatRMTCNumber(insulationRequired + 3)} megaohms MIN`, required: `${formatRMTCNumber(insulationRequired)} megaohms MIN` },
+                { property: "Electric Strength in oil at 90 C - Flatwise", unit: "MV/m", observed: `${formatRMTCNumber(electricFlatwise)} MIN`, required: `${formatRMTCNumber(electricRequired)} MIN` },
                 { property: "Electric Strength in oil at 90 C - Edgewise", unit: "KV", observed: "COMPLIES", required: "COMPLIES" },
                 { property: "Heat Ageing Test at 275 C", unit: "Min./Hrs.", observed: "NO EFFECT", required: "26 MINIMUM" },
                 { property: "Shearing & Punching", unit: "--", observed: thickness <= 12 ? "GOOD" : "GOOD / MACHINABLE", required: "GOOD" },
@@ -2629,6 +2693,90 @@
                 { property: "Specific Gravity", unit: "gm/cc", observed: specificGravity, required: "1.32-1.40" },
                 { property: "Resistance to hot oil", unit: "--", observed: "Not splitting, blistering etc.", required: "Complies" }
             ];
+        };
+
+        const getGlassEpoxyTolerance = (thicknessValue) => {
+            const thickness = parseRMTCThickness(thicknessValue, "GlassEpoxy");
+            if (thickness <= 3) return "Thickness tolerance: +/- 0.15 mm.";
+            if (thickness <= 10) return "Thickness tolerance: +/- 0.25 mm.";
+            if (thickness <= 25) return "Thickness tolerance: +/- 0.40 mm.";
+            if (thickness <= 50) return "Thickness tolerance: +/- 0.60 mm.";
+            return "Thickness tolerance: +/- 0.80 mm.";
+        };
+
+        const getGlassEpoxyAutoTests = (thicknessValue) => {
+            const thickness = parseRMTCThickness(thicknessValue, "GlassEpoxy");
+            const tensileRequired = pickRMTCBandValue(thickness, [
+                { max: 3, value: 260 },
+                { max: 10, value: 240 },
+                { max: 25, value: 220 },
+                { max: 50, value: 194 },
+                { max: 80, value: 185 }
+            ]);
+            const glassContentRequired = pickRMTCBandValue(thickness, [
+                { max: 10, value: 42 },
+                { max: 25, value: 41 },
+                { max: 80, value: 40 }
+            ]);
+            const waterRequired = pickRMTCBandValue(thickness, [
+                { max: 3, value: 0.18 },
+                { max: 10, value: 0.2 },
+                { max: 25, value: 0.25 },
+                { max: 50, value: 0.3 },
+                { max: 80, value: 0.35 }
+            ]);
+            const dielectricRequired = pickRMTCBandValue(thickness, [
+                { max: 3, value: 30 },
+                { max: 10, value: 28 },
+                { max: 25, value: 25 },
+                { max: 50, value: 22 },
+                { max: 80, value: 20 }
+            ]);
+            const flexuralRequired = pickRMTCBandValue(thickness, [
+                { max: 3, value: 3800 },
+                { max: 10, value: 3650 },
+                { max: 25, value: 3500 },
+                { max: 50, value: 3350 },
+                { max: 80, value: 3200 }
+            ]);
+            const impactRequired = pickRMTCBandValue(thickness, [
+                { max: 10, value: 50 },
+                { max: 25, value: 48 },
+                { max: 50, value: 45 },
+                { max: 80, value: 42 }
+            ]);
+            const compressiveRequired = pickRMTCBandValue(thickness, [
+                { max: 10, value: 1750 },
+                { max: 25, value: 1680 },
+                { max: 50, value: 1600 },
+                { max: 80, value: 1500 }
+            ]);
+            const permittivityRequired = pickRMTCBandValue(thickness, [
+                { max: 10, value: 5 },
+                { max: 25, value: 5.2 },
+                { max: 80, value: 5.4 }
+            ]);
+            return [
+                { property: "Tensile strength", unit: "N/Sq.mm", observed: formatRMTCNumber(tensileRequired + 2.5), required: `${formatRMTCNumber(tensileRequired)} MIN` },
+                { property: "Glass content", unit: "%", observed: `${formatRMTCNumber(glassContentRequired + 0.5)}%`, required: `${formatRMTCNumber(glassContentRequired)}% MIN` },
+                { property: "Water absorption at 24 HRS", unit: "D-570", observed: `${formatRMTCNumber(Math.max(0.08, waterRequired - 0.04), 2)}%`, required: `${formatRMTCNumber(waterRequired, 2)}% MAX` },
+                { property: "Insulation Resistance at room temp 230 C", unit: "MOhm at 500 volt DC", observed: "4 x 10^4 MOhm MIN", required: "1 x 10^4 MOhm MIN" },
+                { property: "DI-Electric Strength in oil at 90 C", unit: "KV/mm", observed: formatRMTCNumber(dielectricRequired + 0.8, 2), required: `${formatRMTCNumber(dielectricRequired, 2)} MIN` },
+                { property: "Tracking index Volts", unit: "IEC-112", observed: "635 MIN", required: "600 MIN" },
+                { property: "Flexural strength", unit: "kg/sq.mm", observed: formatRMTCNumber(flexuralRequired + 45), required: `${formatRMTCNumber(flexuralRequired)} MIN` },
+                { property: "Specific gravity", unit: "GM/CC", observed: thickness <= 25 ? "1.80" : "1.82", required: "1.70-1.90" },
+                { property: "Impact strength IZOD", unit: "Joules", observed: formatRMTCNumber(impactRequired + 2.1, 1), required: `${formatRMTCNumber(impactRequired)} MIN` },
+                { property: "Compressive strength", unit: "Kg/sq.cm", observed: formatRMTCNumber(compressiveRequired + 55), required: `${formatRMTCNumber(compressiveRequired)} MIN` },
+                { property: "Permittivity at room", unit: "Seconds", observed: formatRMTCNumber(permittivityRequired - 0.15, 2), required: `${formatRMTCNumber(permittivityRequired, 1)} MAX` }
+            ];
+        };
+
+        const getRMTCMaterialTolerance = (materialKey, thicknessValue) => {
+            return materialKey === "GlassEpoxy" ? getGlassEpoxyTolerance(thicknessValue) : getBakeliteTolerance(thicknessValue);
+        };
+
+        const getRMTCMaterialTests = (materialKey, thicknessValue) => {
+            return materialKey === "GlassEpoxy" ? getGlassEpoxyAutoTests(thicknessValue) : getBakeliteAutoTests(thicknessValue);
         };
 
         const RMTC_MATERIAL_TEMPLATES = {
@@ -2677,24 +2825,12 @@
                     quantity: "",
                     invoiceNo: "",
                     specification: "Conforms to specification IS 2036-1995 for grade FRP & FR4",
-                    tolerance: "Thickness tolerance as per ISO: +/- 0.25 mm unless otherwise specified.",
+                    tolerance: getGlassEpoxyTolerance("5.0"),
                     remarks: "Material supplied to K.D. Enterprises against the above product details and supplier raw material test data.",
                     authorisedBy: "",
                     authorisedRole: "Authorised Signatory"
                 },
-                tests: [
-                    { property: "Tensile strength", unit: "N/Sq.mm", observed: "193.82", required: "194" },
-                    { property: "Glass content", unit: "%", observed: "40.5%", required: "42%" },
-                    { property: "Water absorption at 24 HRS", unit: "D-570", observed: "0.25%", required: "Satisfactory" },
-                    { property: "Insulation Resistance at room temp 230 C", unit: "M* at 500 volt DC", observed: "4X10 M*", required: "Satisfactory" },
-                    { property: "DI-Electric Strength in oil at 90 C", unit: "KV/mm", observed: "28.92", required: "OK" },
-                    { property: "Tracking index Volts", unit: "(FRP) IEC-112", observed: "635.22", required: "OK" },
-                    { property: "Flexural strength", unit: "kg/sq.mm", observed: "3469", required: "3500" },
-                    { property: "Specific gravity", unit: "GM/CC", observed: "1.7", required: "OK" },
-                    { property: "Impact strength IZOD", unit: "Joules", observed: "51.9", required: "OK" },
-                    { property: "Compressive strength", unit: "Kg/sq.cm", observed: "1748", required: "OK" },
-                    { property: "Permittivity at room", unit: "Seconds", observed: "4.85", required: "5" }
-                ]
+                tests: getGlassEpoxyAutoTests("5.0")
             }
         };
 
@@ -2708,11 +2844,9 @@
                     materialKey: selectedKey,
                     certificateDate: today,
                     generatedDate: today,
-                    tolerance: selectedKey === "Bakelite" ? getBakeliteTolerance(template.details.thickness) : template.details.tolerance
+                    tolerance: getRMTCMaterialTolerance(selectedKey, template.details.thickness)
                 },
-                tests: selectedKey === "Bakelite"
-                    ? getBakeliteAutoTests(template.details.thickness)
-                    : template.tests.map(test => ({ ...test }))
+                tests: getRMTCMaterialTests(selectedKey, template.details.thickness)
             };
         };
 
@@ -2739,14 +2873,18 @@
             const { details, tests } = draft;
             const selectedTemplate = RMTC_MATERIAL_TEMPLATES[details.materialKey] || RMTC_MATERIAL_TEMPLATES.Bakelite;
             const materialOptions = Object.entries(RMTC_MATERIAL_TEMPLATES);
-            const materialThicknessText = `${details.thickness || "-"} MM`;
+            const thicknessRange = getRMTCThicknessRange(details.materialKey);
+            const materialThicknessText = getRMTCMaterialThicknessText(details.thickness, details.materialKey);
+            const autoValueNote = details.materialKey === "GlassEpoxy"
+                ? "Glass Epoxy / FRP report values auto-populate from material thickness between 2 mm and 80 mm."
+                : "Bakelite report values auto-populate from material thickness between 0.5 mm and 80 mm.";
             const updateDetail = (field, value) => setDraft(prev => {
                 const nextDetails = { ...prev.details, [field]: value };
-                if (field === "thickness" && nextDetails.materialKey === "Bakelite") {
+                if (field === "thickness") {
                     return {
                         ...prev,
-                        details: { ...nextDetails, tolerance: getBakeliteTolerance(value) },
-                        tests: getBakeliteAutoTests(value)
+                        details: { ...nextDetails, tolerance: getRMTCMaterialTolerance(nextDetails.materialKey, value) },
+                        tests: getRMTCMaterialTests(nextDetails.materialKey, value)
                     };
                 }
                 return { ...prev, details: nextDetails };
@@ -2754,6 +2892,11 @@
             const updateTest = (index, field, value) => setDraft(prev => ({
                 ...prev,
                 tests: prev.tests.map((test, testIndex) => testIndex === index ? { ...test, [field]: value } : test)
+            }));
+            const refreshAutoValues = () => setDraft(prev => ({
+                ...prev,
+                details: { ...prev.details, tolerance: getRMTCMaterialTolerance(prev.details.materialKey, prev.details.thickness) },
+                tests: getRMTCMaterialTests(prev.details.materialKey, prev.details.thickness)
             }));
             const addTest = () => setDraft(prev => ({ ...prev, tests: [...prev.tests, { property: "New test parameter", unit: "", observed: "", required: "" }] }));
             const removeTest = index => setDraft(prev => ({ ...prev, tests: prev.tests.filter((_, testIndex) => testIndex !== index) }));
@@ -2809,13 +2952,13 @@
                                     <AdminField label="Certificate Date" type="date" value={details.certificateDate} onChange={(value) => updateDetail("certificateDate", value)} />
                                     <AdminField label="Generated Date" type="date" value={details.generatedDate} onChange={(value) => updateDetail("generatedDate", value)} />
                                     <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
-                                    <AdminField label="Material Thickness" type="number" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} suffix="mm" />
+                                    <AdminField label="Material Thickness" type="number" min={thicknessRange.min} max={thicknessRange.max} step="0.1" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} suffix="mm" />
                                 </div>
                                 <div className="mt-3 space-y-3">
                                     <AdminField label="Certificate Provider" value={details.providerName} onChange={(value) => updateDetail("providerName", value)} />
                                     <AdminField label="Provider Location" value={details.providerLocation} onChange={(value) => updateDetail("providerLocation", value)} />
                                 </div>
-                                {details.materialKey === "Bakelite" && <p className="mt-3 text-xs font-bold text-blue-700">Bakelite report values auto-populate from material thickness between 0.5 mm and 80 mm.</p>}
+                                <p className="mt-3 text-xs font-bold text-blue-700">{autoValueNote}</p>
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -2839,7 +2982,10 @@
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                                 <div className="flex items-center justify-between gap-3 mb-4">
                                     <h3 className="font-extrabold text-lg text-slate-950">Test Report Values</h3>
-                                    <button type="button" onClick={addTest} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add Row</button>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={refreshAutoValues} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700 hover:bg-blue-100">Auto-fill</button>
+                                        <button type="button" onClick={addTest} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add Row</button>
+                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     {tests.map((test, index) => (
@@ -2869,7 +3015,6 @@
                         </div>
 
                         <div className="print-document rmtc-print-document bg-white border border-slate-300 overflow-hidden">
-                            <div className="rmtc-watermark">K.D. ENTERPRISES</div>
                             <div className="rmtc-document-content rmtc-print-body p-10">
                                 <div className="text-center">
                                     <div className="rmtc-provider-name">{details.providerName}</div>
