@@ -60,6 +60,91 @@
             font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
             letter-spacing: 0;
         }
+        .rmtc-print-document {
+            font-family: "Times New Roman", Times, serif;
+            color: #111827;
+            position: relative;
+        }
+        .rmtc-watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Times New Roman", Times, serif;
+            font-size: clamp(44px, 8vw, 94px);
+            font-weight: 700;
+            color: rgba(15, 23, 42, 0.045);
+            letter-spacing: 0.12em;
+            transform: rotate(-26deg);
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+            text-align: center;
+        }
+        .rmtc-document-content { position: relative; z-index: 1; }
+        .rmtc-provider-name {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 24px;
+            line-height: 1.15;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .rmtc-provider-location {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 15px;
+            line-height: 1.2;
+            text-align: center;
+            font-weight: 700;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        .rmtc-date-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 22px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .rmtc-detail-table, .rmtc-print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "Times New Roman", Times, serif;
+        }
+        .rmtc-detail-table td {
+            padding: 4px 5px;
+            vertical-align: top;
+            font-size: 15px;
+            line-height: 1.2;
+        }
+        .rmtc-detail-table .rmtc-row-no { width: 30px; text-align: right; padding-right: 8px; }
+        .rmtc-detail-table .rmtc-row-label { width: 190px; }
+        .rmtc-detail-table .rmtc-row-colon { width: 12px; text-align: center; }
+        .rmtc-print-table th,
+        .rmtc-print-table td {
+            border: 1px solid #4b5563;
+            padding: 6px 8px;
+            font-size: 14px;
+            line-height: 1.15;
+            vertical-align: middle;
+        }
+        .rmtc-print-table th {
+            background: transparent;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-align: left;
+        }
+        .rmtc-signature-name {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 22px;
+            line-height: 1.1;
+            min-height: 46px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+        }
         @media (prefers-reduced-motion: reduce) {
             .particle-canvas { opacity: 0.14; }
         }
@@ -160,6 +245,39 @@
             .pdir-print-document .text-lg { font-size: 11px !important; line-height: 1.2 !important; }
             .pdir-print-document .text-sm { font-size: 9px !important; }
             .pdir-print-document .text-xs { font-size: 8px !important; }
+            .rmtc-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .rmtc-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 9px !important;
+                line-height: 1.16 !important;
+                font-family: "Times New Roman", Times, serif !important;
+            }
+            .rmtc-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .rmtc-print-body { padding: 8mm 9mm !important; }
+            .rmtc-provider-name { font-size: 18px !important; }
+            .rmtc-provider-location { font-size: 12px !important; }
+            .rmtc-date-row { margin-top: 7mm !important; font-size: 12px !important; }
+            .rmtc-detail-table td { padding: 1mm 1.3mm !important; font-size: 11px !important; }
+            .rmtc-print-section { margin-top: 4mm !important; }
+            .rmtc-print-table { min-width: 0 !important; table-layout: fixed !important; }
+            .rmtc-print-table th, .rmtc-print-table td { padding: 1.1mm 1.5mm !important; font-size: 10px !important; }
+            .rmtc-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .rmtc-note-box { margin-top: 4mm !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+            .rmtc-watermark { font-size: 54px !important; color: rgba(15, 23, 42, 0.055) !important; }
+            .rmtc-signature-name { font-size: 13px !important; min-height: 7mm !important; }
         }
     </style>
 </head>
@@ -340,7 +458,8 @@
         const ADMIN_TOOLS = [
             { key: "Calculator", label: "Internal Calculator", title: "KD Internal Pricing Calculator", icon: "calculator" },
             { key: "Payslip", label: "Payslip Template", title: "Editable Payslip Template", icon: "receipt-text" },
-            { key: "PDIR", label: "Generate PDIR", title: "PDIR Generator", icon: "clipboard-check" }
+            { key: "PDIR", label: "Generate PDIR", title: "PDIR Generator", icon: "clipboard-check" },
+            { key: "RMTC", label: "Generate RMTC", title: "Raw Material Test Certificate", icon: "file-check-2" }
         ];
 
         const Icon = ({ name, className = "" }) => <i data-lucide={name} className={className}></i>;
@@ -2468,6 +2587,366 @@
             );
         };
 
+        const parseRMTCThickness = (value) => {
+            const numeric = Number(String(value || "").replace(/[^\d.]/g, ""));
+            if (!Number.isFinite(numeric)) return 5;
+            return Math.min(80, Math.max(0.5, numeric));
+        };
+
+        const formatRMTCNumber = (value, decimals = 1) => {
+            const fixed = Number(value).toFixed(decimals);
+            return fixed.replace(/\.0$/, "");
+        };
+
+        const getBakeliteTolerance = (thicknessValue) => {
+            const thickness = parseRMTCThickness(thicknessValue);
+            if (thickness <= 1) return "Thickness tolerance: +/- 0.10 mm.";
+            if (thickness <= 3) return "Thickness tolerance: +/- 0.15 mm.";
+            if (thickness <= 10) return "Thickness tolerance: +/- 0.25 mm.";
+            if (thickness <= 25) return "Thickness tolerance: +/- 0.50 mm.";
+            if (thickness <= 50) return "Thickness tolerance: +/- 0.80 mm.";
+            return "Thickness tolerance: +/- 1.00 mm.";
+        };
+
+        const getBakeliteAutoTests = (thicknessValue) => {
+            const thickness = parseRMTCThickness(thicknessValue);
+            const crossBreaking = Math.max(132.5, 138 - Math.min(thickness, 80) * 0.045);
+            const shear = Math.max(78.2, 82 - Math.min(thickness, 80) * 0.035);
+            const waterAbsorption = Math.min(245, 95 + thickness * 1.85);
+            const electricFlatwise = Math.max(6.5, 17.5 - thickness * 0.13);
+            const specificGravity = thickness <= 10 ? "1.32" : thickness <= 30 ? "1.33" : "1.34";
+            return [
+                { property: "Cross Breaking Strength", unit: "MPa", observed: `${formatRMTCNumber(crossBreaking)} MIN`, required: "132 MIN" },
+                { property: "Shear Strength Flatwise", unit: "MPa", observed: `${formatRMTCNumber(shear)} MIN`, required: "77.9 MIN" },
+                { property: "Water absorption at 27 C", unit: "mg", observed: `${formatRMTCNumber(waterAbsorption)} mg`, required: "255 mg MAX" },
+                { property: "Insulation Resistance at 27 C", unit: "megaohms", observed: "25 megaohms MIN", required: "22 megaohms MIN" },
+                { property: "Electric Strength in oil at 90 C - Flatwise", unit: "MV/m", observed: `${formatRMTCNumber(electricFlatwise)} MIN`, required: "COMPLIES" },
+                { property: "Electric Strength in oil at 90 C - Edgewise", unit: "KV", observed: "COMPLIES", required: "COMPLIES" },
+                { property: "Heat Ageing Test at 275 C", unit: "Min./Hrs.", observed: "NO EFFECT", required: "26 MINIMUM" },
+                { property: "Shearing & Punching", unit: "--", observed: thickness <= 12 ? "GOOD" : "GOOD / MACHINABLE", required: "GOOD" },
+                { property: "Bow", unit: "%", observed: "NIL", required: "NIL" },
+                { property: "Twist", unit: "%", observed: "NIL", required: "NIL" },
+                { property: "Specific Gravity", unit: "gm/cc", observed: specificGravity, required: "1.32-1.40" },
+                { property: "Resistance to hot oil", unit: "--", observed: "Not splitting, blistering etc.", required: "Complies" }
+            ];
+        };
+
+        const RMTC_MATERIAL_TEMPLATES = {
+            Bakelite: {
+                label: "Bakelite / Phenolic Sheet",
+                details: {
+                    materialKey: "Bakelite",
+                    providerName: "ARCHIDPLY INDUSTRIES LTD.",
+                    providerLocation: "",
+                    customerName: "K.D. ENTERPRISES",
+                    refNo: `KD-RMTC-BP-${new Date().getFullYear()}-001`,
+                    certificateDate: new Date().toISOString().slice(0, 10),
+                    generatedDate: new Date().toISOString().slice(0, 10),
+                    productName: "Bakelite / Phenolic Sheet",
+                    codeNo: "P1",
+                    grade: "P1",
+                    thickness: "5.0",
+                    lotNo: "",
+                    colour: "RED / COFFEE / BLACK",
+                    quantity: "",
+                    invoiceNo: "",
+                    specification: "Conforms to specification IS 2036-1995 for grade P1",
+                    tolerance: getBakeliteTolerance("5.0"),
+                    remarks: "Material supplied to K.D. Enterprises against the above product details and supplier raw material test data.",
+                    authorisedBy: "",
+                    authorisedRole: "Authorised Signatory"
+                },
+                tests: getBakeliteAutoTests("5.0")
+            },
+            GlassEpoxy: {
+                label: "Glass Epoxy Sheet",
+                details: {
+                    materialKey: "GlassEpoxy",
+                    providerName: "FIBER GLASS INSULATION PRODUCTS",
+                    providerLocation: "INDIA",
+                    customerName: "K.D. ENTERPRISES",
+                    refNo: `KD-RMTC-GE-${new Date().getFullYear()}-001`,
+                    certificateDate: new Date().toISOString().slice(0, 10),
+                    generatedDate: new Date().toISOString().slice(0, 10),
+                    productName: "Glass Epoxy Sheet",
+                    codeNo: "IP5001",
+                    grade: "FRP & FR4",
+                    thickness: "5.0",
+                    lotNo: "",
+                    colour: "GREY",
+                    quantity: "",
+                    invoiceNo: "",
+                    specification: "Conforms to specification IS 2036-1995 for grade FRP & FR4",
+                    tolerance: "Thickness tolerance as per ISO: +/- 0.25 mm unless otherwise specified.",
+                    remarks: "Material supplied to K.D. Enterprises against the above product details and supplier raw material test data.",
+                    authorisedBy: "",
+                    authorisedRole: "Authorised Signatory"
+                },
+                tests: [
+                    { property: "Tensile strength", unit: "N/Sq.mm", observed: "193.82", required: "194" },
+                    { property: "Glass content", unit: "%", observed: "40.5%", required: "42%" },
+                    { property: "Water absorption at 24 HRS", unit: "D-570", observed: "0.25%", required: "Satisfactory" },
+                    { property: "Insulation Resistance at room temp 230 C", unit: "M* at 500 volt DC", observed: "4X10 M*", required: "Satisfactory" },
+                    { property: "DI-Electric Strength in oil at 90 C", unit: "KV/mm", observed: "28.92", required: "OK" },
+                    { property: "Tracking index Volts", unit: "(FRP) IEC-112", observed: "635.22", required: "OK" },
+                    { property: "Flexural strength", unit: "kg/sq.mm", observed: "3469", required: "3500" },
+                    { property: "Specific gravity", unit: "GM/CC", observed: "1.7", required: "OK" },
+                    { property: "Impact strength IZOD", unit: "Joules", observed: "51.9", required: "OK" },
+                    { property: "Compressive strength", unit: "Kg/sq.cm", observed: "1748", required: "OK" },
+                    { property: "Permittivity at room", unit: "Seconds", observed: "4.85", required: "5" }
+                ]
+            }
+        };
+
+        const createDefaultRMTCDraft = (materialKey = "Bakelite") => {
+            const selectedKey = RMTC_MATERIAL_TEMPLATES[materialKey] ? materialKey : "Bakelite";
+            const template = RMTC_MATERIAL_TEMPLATES[selectedKey];
+            const today = new Date().toISOString().slice(0, 10);
+            return {
+                details: {
+                    ...template.details,
+                    materialKey: selectedKey,
+                    certificateDate: today,
+                    generatedDate: today,
+                    tolerance: selectedKey === "Bakelite" ? getBakeliteTolerance(template.details.thickness) : template.details.tolerance
+                },
+                tests: selectedKey === "Bakelite"
+                    ? getBakeliteAutoTests(template.details.thickness)
+                    : template.tests.map(test => ({ ...test }))
+            };
+        };
+
+        const normaliseRMTCDraft = (draft) => {
+            const selectedKey = draft && draft.details && RMTC_MATERIAL_TEMPLATES[draft.details.materialKey] ? draft.details.materialKey : "Bakelite";
+            const defaults = createDefaultRMTCDraft(selectedKey);
+            return {
+                details: { ...defaults.details, ...(draft && draft.details ? draft.details : {}), materialKey: selectedKey },
+                tests: Array.isArray(draft && draft.tests) && draft.tests.length
+                    ? draft.tests.map(test => ({ property: "", unit: "", observed: "", required: "", ...test }))
+                    : defaults.tests
+            };
+        };
+
+        const RMTCSection = () => {
+            useLucide();
+            const [draft, setDraft] = useState(() => {
+                try {
+                    return normaliseRMTCDraft(JSON.parse(localStorage.getItem("kd_rmtc_draft") || "null"));
+                } catch (error) {
+                    return createDefaultRMTCDraft();
+                }
+            });
+            const { details, tests } = draft;
+            const selectedTemplate = RMTC_MATERIAL_TEMPLATES[details.materialKey] || RMTC_MATERIAL_TEMPLATES.Bakelite;
+            const materialOptions = Object.entries(RMTC_MATERIAL_TEMPLATES);
+            const materialThicknessText = `${details.thickness || "-"} MM`;
+            const updateDetail = (field, value) => setDraft(prev => {
+                const nextDetails = { ...prev.details, [field]: value };
+                if (field === "thickness" && nextDetails.materialKey === "Bakelite") {
+                    return {
+                        ...prev,
+                        details: { ...nextDetails, tolerance: getBakeliteTolerance(value) },
+                        tests: getBakeliteAutoTests(value)
+                    };
+                }
+                return { ...prev, details: nextDetails };
+            });
+            const updateTest = (index, field, value) => setDraft(prev => ({
+                ...prev,
+                tests: prev.tests.map((test, testIndex) => testIndex === index ? { ...test, [field]: value } : test)
+            }));
+            const addTest = () => setDraft(prev => ({ ...prev, tests: [...prev.tests, { property: "New test parameter", unit: "", observed: "", required: "" }] }));
+            const removeTest = index => setDraft(prev => ({ ...prev, tests: prev.tests.filter((_, testIndex) => testIndex !== index) }));
+            const changeMaterial = (materialKey) => setDraft(prev => {
+                const next = createDefaultRMTCDraft(materialKey);
+                return {
+                    ...next,
+                    details: {
+                        ...next.details,
+                        certificateDate: prev.details.certificateDate || next.details.certificateDate,
+                        generatedDate: prev.details.generatedDate || next.details.generatedDate
+                    }
+                };
+            });
+            const saveDraft = () => localStorage.setItem("kd_rmtc_draft", JSON.stringify(draft));
+            const resetDraft = () => setDraft(createDefaultRMTCDraft(details.materialKey));
+            const certificateRows = [
+                ["Customer's Name", details.customerName],
+                ["Material Type", details.productName],
+                ["Code No.", details.codeNo || "-"],
+                ["Grade", details.grade || "-"],
+                ["Material Thickness", materialThicknessText],
+                ["Lot / Load No.", details.lotNo || "-"],
+                ["Colour", details.colour || "-"],
+                ["Quantity", details.quantity || "-"],
+                ["Invoice No.", details.invoiceNo || "-"],
+                ["Specification", details.specification],
+                ["Tolerance", details.tolerance || "-"]
+            ];
+
+            return (
+                <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
+                    <div className="no-print">
+                        <SectionTitle eyebrow="Admin Access Only" title="Raw Material Test Certificate" subtitle="Generate editable RMTC reports for Bakelite / Phenolic and Glass Epoxy sheets with supplier-wise test data." />
+                    </div>
+                    <div className="rmtc-page-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[480px_1fr] gap-6">
+                        <div className="space-y-5 no-print">
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                    <div>
+                                        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">RMTC</p>
+                                        <h3 className="text-xl font-extrabold text-slate-950">Certificate Setup</h3>
+                                    </div>
+                                    <Tag tone="blue">{selectedTemplate.label}</Tag>
+                                </div>
+                                <label className="block">
+                                    <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Material Template</span>
+                                    <select value={details.materialKey} onChange={(e) => changeMaterial(e.target.value)} className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-blue-500">
+                                        {materialOptions.map(([key, template]) => <option key={key} value={key}>{template.label}</option>)}
+                                    </select>
+                                </label>
+                                <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                                    <AdminField label="Certificate Date" type="date" value={details.certificateDate} onChange={(value) => updateDetail("certificateDate", value)} />
+                                    <AdminField label="Generated Date" type="date" value={details.generatedDate} onChange={(value) => updateDetail("generatedDate", value)} />
+                                    <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
+                                    <AdminField label="Material Thickness" type="number" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} suffix="mm" />
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    <AdminField label="Certificate Provider" value={details.providerName} onChange={(value) => updateDetail("providerName", value)} />
+                                    <AdminField label="Provider Location" value={details.providerLocation} onChange={(value) => updateDetail("providerLocation", value)} />
+                                </div>
+                                {details.materialKey === "Bakelite" && <p className="mt-3 text-xs font-bold text-blue-700">Bakelite report values auto-populate from material thickness between 0.5 mm and 80 mm.</p>}
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-extrabold text-lg text-slate-950 mb-4">Product & Batch Details</h3>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Product Name" value={details.productName} onChange={(value) => updateDetail("productName", value)} />
+                                    <AdminField label="Code No." value={details.codeNo} onChange={(value) => updateDetail("codeNo", value)} />
+                                    <AdminField label="Grade" value={details.grade} onChange={(value) => updateDetail("grade", value)} />
+                                    <AdminField label="Colour" value={details.colour} onChange={(value) => updateDetail("colour", value)} />
+                                    <AdminField label="Quantity" value={details.quantity} onChange={(value) => updateDetail("quantity", value)} />
+                                    <AdminField label="Lot / Load No." value={details.lotNo} onChange={(value) => updateDetail("lotNo", value)} />
+                                    <AdminField label="Invoice No." value={details.invoiceNo} onChange={(value) => updateDetail("invoiceNo", value)} />
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    <AdminField label="Specification" rows="2" value={details.specification} onChange={(value) => updateDetail("specification", value)} />
+                                    <AdminField label="Thickness / Size Tolerance" rows="2" value={details.tolerance} onChange={(value) => updateDetail("tolerance", value)} />
+                                    <AdminField label="Remarks" rows="3" value={details.remarks} onChange={(value) => updateDetail("remarks", value)} />
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <div className="flex items-center justify-between gap-3 mb-4">
+                                    <h3 className="font-extrabold text-lg text-slate-950">Test Report Values</h3>
+                                    <button type="button" onClick={addTest} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add Row</button>
+                                </div>
+                                <div className="space-y-4">
+                                    {tests.map((test, index) => (
+                                        <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                            <div className="grid sm:grid-cols-[1fr_110px] gap-2">
+                                                <input value={test.property} onChange={(e) => updateTest(index, "property", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Property" />
+                                                <input value={test.unit} onChange={(e) => updateTest(index, "unit", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Unit" />
+                                            </div>
+                                            <div className="grid grid-cols-[1fr_1fr_34px] gap-2 mt-2">
+                                                <input value={test.observed} onChange={(e) => updateTest(index, "observed", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Observed value" />
+                                                <input value={test.required} onChange={(e) => updateTest(index, "required", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Required value" />
+                                                <button type="button" onClick={() => removeTest(index)} className="rounded-md border border-red-200 bg-white text-red-700 hover:bg-red-50 flex items-center justify-center" aria-label="Remove test row"><Icon name="x" className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Authorised By" value={details.authorisedBy} onChange={(value) => updateDetail("authorisedBy", value)} />
+                                    <AdminField label="Authorised Role" value={details.authorisedRole} onChange={(value) => updateDetail("authorisedRole", value)} />
+                                </div>
+                                <div className="grid sm:grid-cols-3 gap-3 mt-4">
+                                    <button type="button" onClick={saveDraft} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Save Draft</button>
+                                    <button type="button" onClick={() => window.print()} className="rounded-md bg-blue-700 px-4 py-3 text-sm font-extrabold text-white hover:bg-blue-600">Print / PDF</button>
+                                    <button type="button" onClick={resetDraft} className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-document rmtc-print-document bg-white border border-slate-300 overflow-hidden">
+                            <div className="rmtc-watermark">K.D. ENTERPRISES</div>
+                            <div className="rmtc-document-content rmtc-print-body p-10">
+                                <div className="text-center">
+                                    <div className="rmtc-provider-name">{details.providerName}</div>
+                                    {details.providerLocation && <div className="rmtc-provider-location">{details.providerLocation}</div>}
+                                </div>
+
+                                <div className="rmtc-date-row">
+                                    <span>Date: {formatDate(details.generatedDate || details.certificateDate)}</span>
+                                </div>
+
+                                <table className="rmtc-detail-table mt-6">
+                                    <tbody>
+                                        {certificateRows.map(([label, value], index) => (
+                                            <tr key={label}>
+                                                <td className="rmtc-row-no">{index + 1})</td>
+                                                <td className="rmtc-row-label">{label}</td>
+                                                <td className="rmtc-row-colon">:</td>
+                                                <td>{value || "-"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div className="rmtc-print-section mt-6">
+                                    <table className="rmtc-print-table">
+                                        <colgroup>
+                                            <col style={{ width: "7%" }} />
+                                            <col style={{ width: "39%" }} />
+                                            <col style={{ width: "15%" }} />
+                                            <col style={{ width: "20%" }} />
+                                            <col style={{ width: "19%" }} />
+                                        </colgroup>
+                                        <thead>
+                                            <tr>
+                                                {["Sr. No.", "Properties", "Units", "Observed Values", "Required Values"].map(head => <th key={head}>{head}</th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {tests.map((test, index) => (
+                                                <tr key={index}>
+                                                    <td className="text-center">{index + 1}</td>
+                                                    <td>{test.property || "-"}</td>
+                                                    <td>{test.unit || "-"}</td>
+                                                    <td>{test.observed || "-"}</td>
+                                                    <td>{test.required || "-"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="rmtc-note-box mt-5 text-sm leading-snug">
+                                    <p><strong>Note:</strong> {details.tolerance}</p>
+                                    <p className="mt-2"><strong>Remarks:</strong> {details.remarks}</p>
+                                </div>
+
+                                <div className="rmtc-signature-grid mt-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 text-sm">
+                                    <div>
+                                        <p><strong>Generated For:</strong> {details.customerName}</p>
+                                        <p className="mt-1"><strong>Certificate Date:</strong> {formatDate(details.certificateDate)}</p>
+                                    </div>
+                                    <div className="min-w-[260px] text-right">
+                                        <p>For {details.providerName}</p>
+                                        <div className="rmtc-signature-name">{details.authorisedBy}</div>
+                                        <div className="border-t border-slate-500 pt-2 mt-2">
+                                            <p><strong>{details.authorisedBy || "-"}</strong></p>
+                                            <p>{details.authorisedRole}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const ProcessingCostModal = ({ values, labels, onChange, onClose, total, notes, onNotesChange, presetName, setPresetName, presets, onSavePreset, onApplyPreset }) => (
             <div className="fixed inset-0 z-[70] bg-slate-950/70 p-4 flex items-center justify-center" onClick={onClose}>
                 <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -2770,6 +3249,7 @@
                         {activeTab === "Calculator" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity."><CalculatorSection /></AdminGate>}
                         {activeTab === "Payslip" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Create and print an editable employee payslip template for internal payroll records."><PayslipSection /></AdminGate>}
                         {activeTab === "PDIR" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Generate a pre-dispatch inspection report for internal quality and dispatch records."><PDIRSection /></AdminGate>}
+                        {activeTab === "RMTC" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Create supplier-wise raw material test certificates for Bakelite / Phenolic and Glass Epoxy sheet batches."><RMTCSection /></AdminGate>}
                         {activeTab === "Contact" && <ContactSection quoteMessage={quoteMessage} setQuoteMessage={setQuoteMessage} />}
                     </main>
                     <Footer setTab={setTab} />
