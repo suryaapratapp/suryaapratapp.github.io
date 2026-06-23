@@ -60,6 +60,148 @@
             font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
             letter-spacing: 0;
         }
+        .pdir-print-document {
+            color: #111827;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .pdir-sheet-frame {
+            border: 2px solid #111827;
+            background: #ffffff;
+        }
+        .pdir-company-header {
+            padding: 14px 18px 10px;
+            text-align: center;
+            border-bottom: 1px solid #111827;
+        }
+        .pdir-company-title {
+            font-size: 30px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .pdir-company-meta {
+            margin-top: 6px;
+            font-size: 13px;
+            line-height: 1.2;
+            color: #111827;
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .pdir-title-bar,
+        .pdir-section-bar {
+            background: #111827;
+            color: #ffffff;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .pdir-title-bar {
+            text-align: center;
+            font-size: 19px;
+            line-height: 1.1;
+            padding: 8px 10px;
+        }
+        .pdir-section-bar {
+            margin-top: 12px;
+            font-size: 15px;
+            padding: 5px 8px;
+        }
+        .pdir-meta-table,
+        .pdir-checklist-table,
+        .pdir-notes-table,
+        .pdir-signature-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .pdir-meta-table td,
+        .pdir-checklist-table th,
+        .pdir-checklist-table td,
+        .pdir-notes-table td,
+        .pdir-signature-table td {
+            border: 1px solid #374151;
+            vertical-align: middle;
+        }
+        .pdir-meta-table td {
+            padding: 7px 10px;
+            font-size: 13px;
+            line-height: 1.2;
+        }
+        .pdir-label-cell {
+            width: 18%;
+            background: #f3f4f6;
+            font-weight: 800;
+        }
+        .pdir-value-cell {
+            width: 32%;
+            font-weight: 600;
+        }
+        .pdir-checklist-table th {
+            background: #e5e7eb;
+            padding: 7px 8px;
+            font-size: 12px;
+            line-height: 1.15;
+            text-align: left;
+            font-weight: 900;
+        }
+        .pdir-checklist-table td {
+            padding: 7px 8px;
+            font-size: 12px;
+            line-height: 1.18;
+        }
+        .pdir-status-cell {
+            text-align: center;
+            font-weight: 900;
+        }
+        .pdir-notes-table td {
+            padding: 6px 9px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .pdir-final-remarks {
+            margin-top: 10px;
+            border: 1px solid #374151;
+        }
+        .pdir-final-remarks-label {
+            background: #e5e7eb;
+            border-bottom: 1px solid #374151;
+            padding: 7px 9px;
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .pdir-remarks-writing {
+            min-height: 52px;
+            padding: 12px 14px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .pdir-signature-table {
+            margin-top: 12px;
+        }
+        .pdir-signature-table td {
+            padding: 7px 9px;
+            font-size: 12px;
+        }
+        .pdir-signature-label {
+            width: 16%;
+            background: #f3f4f6;
+            font-weight: 900;
+        }
+        .pdir-signature-title {
+            width: 17%;
+            font-weight: 800;
+        }
+        .pdir-signature-box {
+            width: 25%;
+        }
+        .pdir-footer-note {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
         .rmtc-print-document {
             font-family: "Times New Roman", Times, serif;
             color: #111827;
@@ -197,37 +339,35 @@
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 page-break-after: avoid !important;
-                font-size: 9px !important;
-                line-height: 1.22 !important;
+                font-size: 8.5px !important;
+                line-height: 1.14 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
             }
             .pdir-print-document * {
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
             }
-            .pdir-print-header { padding: 4mm !important; }
-            .pdir-print-body { padding: 4mm !important; }
-            .pdir-header-row, .pdir-signature-grid {
-                flex-direction: row !important;
-                align-items: center !important;
-                justify-content: space-between !important;
-            }
-            .pdir-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 2mm !important; }
-            .pdir-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 2.5mm !important; }
-            .pdir-card { padding: 2mm !important; }
-            .pdir-print-table th, .pdir-print-table td { padding: 1.5mm 2mm !important; }
-            .pdir-print-table { min-width: 0 !important; table-layout: fixed !important; }
-            .pdir-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
-            .pdir-print-section { margin-top: 3mm !important; }
-            .pdir-remarks { margin-top: 3mm !important; padding: 3mm !important; }
-            .pdir-signature-grid { margin-top: 4mm !important; }
-            .pdir-signature-card { min-width: 48mm !important; }
-            .pdir-print-document .pdir-signature-mark { font-size: 18px !important; min-height: 8mm !important; }
-            .pdir-print-document .text-3xl { font-size: 17px !important; line-height: 1.1 !important; }
-            .pdir-print-document .text-2xl { font-size: 14px !important; line-height: 1.15 !important; }
-            .pdir-print-document .text-xl { font-size: 12px !important; line-height: 1.18 !important; }
-            .pdir-print-document .text-lg { font-size: 11px !important; line-height: 1.2 !important; }
-            .pdir-print-document .text-sm { font-size: 9px !important; }
-            .pdir-print-document .text-xs { font-size: 8px !important; }
+            .pdir-sheet-frame { border-width: 1.3pt !important; }
+            .pdir-company-header { padding: 3mm 4mm 2.2mm !important; }
+            .pdir-company-title { font-size: 18px !important; line-height: 1 !important; }
+            .pdir-company-meta { margin-top: 1.3mm !important; gap: 5mm !important; font-size: 8.8px !important; }
+            .pdir-title-bar { padding: 1.8mm 2mm !important; font-size: 12.5px !important; }
+            .pdir-section-bar { margin-top: 2.2mm !important; padding: 1mm 1.6mm !important; font-size: 9.8px !important; }
+            .pdir-meta-table td { padding: 1.25mm 1.6mm !important; font-size: 8.5px !important; line-height: 1.15 !important; }
+            .pdir-checklist-table { table-layout: fixed !important; }
+            .pdir-checklist-table th,
+            .pdir-checklist-table td { padding: 1mm 1.2mm !important; font-size: 7.8px !important; line-height: 1.1 !important; }
+            .pdir-checklist-table tr,
+            .pdir-notes-table tr,
+            .pdir-signature-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .pdir-notes-table td { padding: 1mm 1.4mm !important; font-size: 7.8px !important; line-height: 1.1 !important; }
+            .pdir-final-remarks { margin-top: 2mm !important; }
+            .pdir-final-remarks-label { padding: 1mm 1.4mm !important; font-size: 8px !important; }
+            .pdir-remarks-writing { min-height: 9mm !important; padding: 2mm 2.5mm !important; font-size: 12px !important; }
+            .pdir-signature-table { margin-top: 2mm !important; }
+            .pdir-signature-table td { padding: 1mm 1.4mm !important; font-size: 7.8px !important; }
+            .pdir-print-document .pdir-signature-mark { font-size: 14px !important; min-height: 6mm !important; }
+            .pdir-footer-note { margin-top: 1.4mm !important; font-size: 7.2px !important; }
             .rmtc-page-grid {
                 display: block !important;
                 max-width: none !important;
@@ -2287,48 +2427,118 @@
             );
         };
 
-        const createDefaultPDIRDraft = () => ({
-            details: {
-                companyName: "KD Enterprises",
-                companyAddress: "St. 3, Plot No. B/41, Ballabgarh, Faridabad 121004, Haryana, India",
-                companyEmail: "sales@kd-enterprises.co.in",
-                companyGst: "06AGYPD8145K1ZT",
-                reportNo: `KD-PDIR-${new Date().getFullYear()}-001`,
-                reportDate: new Date().toISOString().slice(0, 10),
-                customerName: "Customer Name",
-                poNo: "",
-                challanNo: "",
-                productName: "Custom Plastic Component",
-                material: "Bakelite / Phenolic Sheet",
-                drawingNo: "",
-                quantity: "",
-                batchNo: "",
-                inspectionLocation: "KD Enterprises, Faridabad",
-                inspectedBy: "",
-                approvedBy: "",
-                dispatchStatus: "Ready for dispatch",
-                remarks: "Material inspected as per available drawing/sample and dispatch checklist."
-            },
-            checks: [
-                { parameter: "Material verification", specification: "As per PO / drawing", observed: "Confirmed", result: "OK", remarks: "" },
-                { parameter: "Dimensions", specification: "As per drawing / sample", observed: "Within tolerance", result: "OK", remarks: "" },
-                { parameter: "Cutting / drilling finish", specification: "Clean finish, deburred edges", observed: "Accepted", result: "OK", remarks: "" },
-                { parameter: "Quantity check", specification: "As per order", observed: "Confirmed", result: "OK", remarks: "" },
-                { parameter: "Packing condition", specification: "Packed for safe dispatch", observed: "Accepted", result: "OK", remarks: "" }
-            ]
+        const PDIR_AUTO_DETAIL_FIELDS = [
+            "productName", "material", "finish", "drawingNo", "referenceDrawing", "modelApplication", "revision",
+            "dimensionsUnit", "overallLength", "overallWidth", "thickness", "innerReferenceWidth", "horizontalHoleSpacing",
+            "holeEdgeReference", "holeDiameter", "holeCount", "cornerRadius"
+        ];
+
+        const cleanPDIRValue = value => String(value || "").trim();
+        const pdirDisplay = value => cleanPDIRValue(value) || "-";
+        const pdirWithUnit = (value, unit = "mm") => {
+            const text = cleanPDIRValue(value);
+            if (!text) return "";
+            if (/[a-zA-Z]/.test(text)) return text;
+            return `${text} ${unit || "mm"}`;
+        };
+        const pdirHoleSpec = details => {
+            const unit = details.dimensionsUnit || "mm";
+            const diameter = pdirWithUnit(details.holeDiameter, unit);
+            const count = cleanPDIRValue(details.holeCount);
+            if (diameter && count) return `Dia ${diameter}, ${count} nos.`;
+            return diameter || (count ? `${count} nos.` : "");
+        };
+        const pdirSpacingSpec = details => {
+            const unit = details.dimensionsUnit || "mm";
+            const spacing = pdirWithUnit(details.horizontalHoleSpacing, unit);
+            const edge = pdirWithUnit(details.holeEdgeReference, unit);
+            if (spacing && edge) return `${spacing} with ${edge} edge reference`;
+            return spacing || edge;
+        };
+        const pdirInspectionRow = (parameter, specification, method, observation) => ({
+            parameter,
+            specification,
+            method,
+            observation: observation || specification || "OK",
+            status: "Pass"
+        });
+        const createPDIRAutoChecks = (details) => {
+            const unit = details.dimensionsUnit || "mm";
+            const rows = [
+                pdirInspectionRow("Overall Length", pdirWithUnit(details.overallLength, unit), "Vernier / Scale"),
+                pdirInspectionRow("Overall Width", pdirWithUnit(details.overallWidth, unit), "Vernier / Scale"),
+                pdirInspectionRow("Thickness", pdirWithUnit(details.thickness, unit), "Micrometer / Vernier"),
+                pdirInspectionRow("Inner reference width", pdirWithUnit(details.innerReferenceWidth, unit), "Vernier / Scale"),
+                pdirInspectionRow("Horizontal hole spacing", pdirSpacingSpec(details), "Vernier / Scale", "Pass"),
+                pdirInspectionRow("Hole diameter", pdirHoleSpec(details), "Vernier / Pin Gauge", "Pass"),
+                pdirInspectionRow("Corner radius", pdirWithUnit(details.cornerRadius, unit), "Radius Gauge / Visual", "Pass"),
+                pdirInspectionRow("Material", cleanPDIRValue(details.material), "Material certificate / Visual", "OK"),
+                pdirInspectionRow("Finish / Colour", cleanPDIRValue(details.finish), "Visual inspection", "OK"),
+                pdirInspectionRow("Edge quality", "Clean edges, no sharp burrs, chips or cracks", "Visual / Touch check", "OK"),
+                pdirInspectionRow("Surface condition", "No visible scratches, cracks, stains or damage", "Visual inspection", "OK"),
+                pdirInspectionRow("Marking / Packing", "Packed safely to avoid scratches and transit damage", "Visual inspection", "OK")
+            ];
+            return rows.filter(row => row.specification || ["Edge quality", "Surface condition", "Marking / Packing"].includes(row.parameter));
+        };
+
+        const createDefaultPDIRDetails = () => ({
+            companyName: "KD ENTERPRISES",
+            companyWebsite: "kd-enterprises.co.in",
+            companyEmail: "sales@kd-enterprises.co.in",
+            companyGst: "06AGYPD8145K1ZT",
+            reportNo: `PDIR/KDE/${new Date().getFullYear()}/001`,
+            reportDate: new Date().toISOString().slice(0, 10),
+            customerName: "Customer Name",
+            supplier: "KD Enterprises",
+            productName: "Custom Plastic Component",
+            modelApplication: "",
+            drawingNo: "Development Drawing",
+            revision: "00",
+            material: "PC",
+            finish: "Natural / Transparent",
+            referenceDrawing: "",
+            dimensionsUnit: "mm",
+            overallLength: "130",
+            overallWidth: "97",
+            thickness: "3",
+            innerReferenceWidth: "85",
+            horizontalHoleSpacing: "59 mm + 59 mm",
+            holeEdgeReference: "6",
+            holeDiameter: "5",
+            holeCount: "06",
+            cornerRadius: "R3",
+            inspectedBy: "",
+            approvedBy: "",
+            remarks: "All Good."
+        });
+
+        const createDefaultPDIRDraft = () => {
+            const details = createDefaultPDIRDetails();
+            return { details, checks: createPDIRAutoChecks(details) };
+        };
+
+        const normalisePDIRCheck = (check) => ({
+            parameter: check.parameter || "Inspection parameter",
+            specification: check.specification || "",
+            method: check.method || "",
+            observation: check.observation || check.observed || "",
+            status: check.status || (check.result === "OK" ? "Pass" : check.result || "Pass")
         });
 
         const normalisePDIRDraft = (draft) => {
             const defaults = createDefaultPDIRDraft();
+            const details = { ...defaults.details, ...(draft && draft.details ? draft.details : {}) };
+            const incomingChecks = Array.isArray(draft && draft.checks) ? draft.checks : [];
+            const hasChecklistShape = incomingChecks.some(check => check.method || check.observation || check.status);
             return {
-                details: { ...defaults.details, ...(draft && draft.details ? draft.details : {}) },
-                checks: Array.isArray(draft && draft.checks) ? draft.checks : defaults.checks
+                details,
+                checks: hasChecklistShape ? incomingChecks.map(normalisePDIRCheck) : createPDIRAutoChecks(details)
             };
         };
 
         const PDIRSection = () => {
             useLucide();
-            const resultOptions = ["OK", "Hold", "Rework", "N/A"];
+            const statusOptions = ["Pass", "Fail", "Hold", "N/A"];
             const [draft, setDraft] = useState(() => {
                 try {
                     return normalisePDIRDraft(JSON.parse(localStorage.getItem("kd_pdir_draft") || "null"));
@@ -2337,45 +2547,50 @@
                 }
             });
             const { details, checks } = draft;
-            const updateDetail = (field, value) => setDraft(prev => ({ ...prev, details: { ...prev.details, [field]: value } }));
+            const updateDetail = (field, value) => setDraft(prev => {
+                const nextDetails = { ...prev.details, [field]: value };
+                return {
+                    ...prev,
+                    details: nextDetails,
+                    checks: PDIR_AUTO_DETAIL_FIELDS.includes(field) ? createPDIRAutoChecks(nextDetails) : prev.checks
+                };
+            });
             const updateCheck = (index, field, value) => setDraft(prev => ({
                 ...prev,
                 checks: prev.checks.map((check, checkIndex) => checkIndex === index ? { ...check, [field]: value } : check)
             }));
-            const addCheck = () => setDraft(prev => ({ ...prev, checks: [...prev.checks, { parameter: "New checkpoint", specification: "", observed: "", result: "OK", remarks: "" }] }));
+            const autoGenerateChecks = () => setDraft(prev => ({ ...prev, checks: createPDIRAutoChecks(prev.details) }));
+            const addCheck = () => setDraft(prev => ({ ...prev, checks: [...prev.checks, { parameter: "New inspection parameter", specification: "", method: "", observation: "", status: "Pass" }] }));
             const removeCheck = index => setDraft(prev => ({ ...prev, checks: prev.checks.filter((_, checkIndex) => checkIndex !== index) }));
             const saveDraft = () => localStorage.setItem("kd_pdir_draft", JSON.stringify(draft));
             const resetDraft = () => setDraft(createDefaultPDIRDraft());
-            const overallStatus = checks.some(check => ["Hold", "Rework"].includes(check.result)) ? "Hold for review" : "Approved for dispatch";
-            const summaryCards = [
-                ["Report Date", formatDate(details.reportDate)],
-                ["PDIR No.", details.reportNo],
-                ["Overall Status", overallStatus],
-                ["Dispatch Status", details.dispatchStatus || "-"]
+            const hasIssue = checks.some(check => ["Fail", "Hold"].includes(check.status));
+            const overallStatus = hasIssue ? "Hold for review" : "Approved for dispatch";
+            const signatureDate = formatDate(details.reportDate);
+            const pdirDetailRows = [
+                ["PDIR No.", details.reportNo, "PDIR Date", formatDate(details.reportDate)],
+                ["Customer", details.customerName, "Supplier", details.supplier],
+                ["Product / Part Name", details.productName, "Model / Application", details.modelApplication],
+                ["Drawing No.", details.drawingNo, "Revision", details.revision],
+                ["Material", details.material, "Finish", details.finish],
+                ["Reference Drawing", details.referenceDrawing, "Dimensions Unit", details.dimensionsUnit]
             ];
-            const orderDetails = [
-                ["Customer", details.customerName],
-                ["PO No.", details.poNo || "-"],
-                ["Challan No.", details.challanNo || "-"],
-                ["Batch No.", details.batchNo || "-"]
-            ];
-            const productDetails = [
-                ["Product / Item", details.productName],
-                ["Material", details.material],
-                ["Drawing No.", details.drawingNo || "-"],
-                ["Quantity", details.quantity || "-"]
+            const drawingNotes = [
+                `All dimensions are in ${details.dimensionsUnit || "mm"}. Do not scale the drawing.`,
+                "General dimensional tolerances to be considered as per drawing tolerance table unless otherwise specified.",
+                `Inspection to be carried out against the supplied drawing: ${pdirDisplay(details.productName)}${details.modelApplication ? ` - ${details.modelApplication}` : ""}, Rev. ${pdirDisplay(details.revision)}.`
             ];
             const signatories = [
-                { label: "Inspected By", name: (details.inspectedBy || "").trim(), role: "Quality Inspection" },
-                { label: "Approved By", name: (details.approvedBy || "").trim(), role: "Dispatch Approval" }
+                { label: "Inspected By", name: cleanPDIRValue(details.inspectedBy) },
+                { label: "Approved By", name: cleanPDIRValue(details.approvedBy) }
             ];
 
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
                     <div className="no-print">
-                        <SectionTitle eyebrow="Admin Access Only" title="PDIR Generator" subtitle="Generate a clean Pre-Dispatch Inspection Report with editable inspection checkpoints and dispatch approval details." />
+                        <SectionTitle eyebrow="Admin Access Only" title="PDIR Generator" subtitle="Enter product details and dimensions to automatically generate a professional Pre-Dispatch Inspection Report checklist." />
                     </div>
-                    <div className="pdir-page-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[460px_1fr] gap-6">
+                    <div className="pdir-page-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid xl:grid-cols-[480px_1fr] gap-6">
                         <div className="space-y-5 no-print">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -2387,41 +2602,56 @@
                                 </div>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                     <AdminField label="PDIR No." value={details.reportNo} onChange={(value) => updateDetail("reportNo", value)} />
-                                    <AdminField label="Report Date" type="date" value={details.reportDate} onChange={(value) => updateDetail("reportDate", value)} />
+                                    <AdminField label="PDIR Date" type="date" value={details.reportDate} onChange={(value) => updateDetail("reportDate", value)} />
                                     <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
-                                    <AdminField label="PO No." value={details.poNo} onChange={(value) => updateDetail("poNo", value)} />
-                                    <AdminField label="Challan No." value={details.challanNo} onChange={(value) => updateDetail("challanNo", value)} />
-                                    <AdminField label="Batch No." value={details.batchNo} onChange={(value) => updateDetail("batchNo", value)} />
-                                </div>
-                                <div className="mt-3 space-y-3">
-                                    <AdminField label="Product / Item" value={details.productName} onChange={(value) => updateDetail("productName", value)} />
+                                    <AdminField label="Supplier" value={details.supplier} onChange={(value) => updateDetail("supplier", value)} />
+                                    <AdminField label="Product / Part Name" value={details.productName} onChange={(value) => updateDetail("productName", value)} />
+                                    <AdminField label="Model / Application" value={details.modelApplication} onChange={(value) => updateDetail("modelApplication", value)} />
+                                    <AdminField label="Drawing No." value={details.drawingNo} onChange={(value) => updateDetail("drawingNo", value)} />
+                                    <AdminField label="Revision" value={details.revision} onChange={(value) => updateDetail("revision", value)} />
                                     <AdminField label="Material" value={details.material} onChange={(value) => updateDetail("material", value)} />
-                                    <div className="grid sm:grid-cols-2 gap-3">
-                                        <AdminField label="Drawing No." value={details.drawingNo} onChange={(value) => updateDetail("drawingNo", value)} />
-                                        <AdminField label="Quantity" value={details.quantity} onChange={(value) => updateDetail("quantity", value)} />
-                                    </div>
-                                    <AdminField label="Inspection Location" value={details.inspectionLocation} onChange={(value) => updateDetail("inspectionLocation", value)} />
+                                    <AdminField label="Finish / Colour" value={details.finish} onChange={(value) => updateDetail("finish", value)} />
+                                    <AdminField label="Reference Drawing" value={details.referenceDrawing} onChange={(value) => updateDetail("referenceDrawing", value)} />
+                                    <AdminField label="Dimensions Unit" value={details.dimensionsUnit} onChange={(value) => updateDetail("dimensionsUnit", value)} />
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                                <h3 className="font-extrabold text-lg text-slate-950 mb-4">Product Dimensions</h3>
+                                <div className="grid sm:grid-cols-2 gap-3">
+                                    <AdminField label="Overall Length" value={details.overallLength} onChange={(value) => updateDetail("overallLength", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Overall Width" value={details.overallWidth} onChange={(value) => updateDetail("overallWidth", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Thickness" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Inner Ref. Width" value={details.innerReferenceWidth} onChange={(value) => updateDetail("innerReferenceWidth", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Hole Spacing" value={details.horizontalHoleSpacing} onChange={(value) => updateDetail("horizontalHoleSpacing", value)} />
+                                    <AdminField label="Hole Edge Reference" value={details.holeEdgeReference} onChange={(value) => updateDetail("holeEdgeReference", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Hole Diameter" value={details.holeDiameter} onChange={(value) => updateDetail("holeDiameter", value)} suffix={details.dimensionsUnit || "mm"} />
+                                    <AdminField label="Hole Count" value={details.holeCount} onChange={(value) => updateDetail("holeCount", value)} suffix="nos." />
+                                    <AdminField label="Corner Radius" value={details.cornerRadius} onChange={(value) => updateDetail("cornerRadius", value)} />
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                                 <div className="flex items-center justify-between gap-3 mb-4">
-                                    <h3 className="font-extrabold text-lg text-slate-950">Inspection Checkpoints</h3>
-                                    <button type="button" onClick={addCheck} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add</button>
+                                    <h3 className="font-extrabold text-lg text-slate-950">Inspection Checklist</h3>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={autoGenerateChecks} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700 hover:bg-blue-100">Auto-generate</button>
+                                        <button type="button" onClick={addCheck} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50">Add</button>
+                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     {checks.map((check, index) => (
                                         <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                                             <div className="grid sm:grid-cols-2 gap-2">
-                                                <input value={check.parameter} onChange={(e) => updateCheck(index, "parameter", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Parameter" />
-                                                <input value={check.specification} onChange={(e) => updateCheck(index, "specification", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Specification" />
-                                                <input value={check.observed} onChange={(e) => updateCheck(index, "observed", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Observed" />
-                                                <select value={check.result} onChange={(e) => updateCheck(index, "result", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500">
-                                                    {resultOptions.map(option => <option key={option}>{option}</option>)}
-                                                </select>
+                                                <input value={check.parameter} onChange={(e) => updateCheck(index, "parameter", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Inspection parameter" />
+                                                <input value={check.specification} onChange={(e) => updateCheck(index, "specification", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Required specification" />
+                                                <input value={check.method} onChange={(e) => updateCheck(index, "method", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Method / instrument" />
+                                                <input value={check.observation} onChange={(e) => updateCheck(index, "observation", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Observation / actual" />
                                             </div>
                                             <div className="grid grid-cols-[1fr_34px] gap-2 mt-2">
-                                                <input value={check.remarks} onChange={(e) => updateCheck(index, "remarks", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" placeholder="Remarks" />
+                                                <select value={check.status} onChange={(e) => updateCheck(index, "status", e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500">
+                                                    {statusOptions.map(option => <option key={option}>{option}</option>)}
+                                                </select>
                                                 <button type="button" onClick={() => removeCheck(index)} className="rounded-md border border-red-200 bg-white text-red-700 hover:bg-red-50 flex items-center justify-center" aria-label="Remove checkpoint"><Icon name="x" className="w-4 h-4" /></button>
                                             </div>
                                         </div>
@@ -2434,8 +2664,7 @@
                                     <AdminField label="Inspected By" value={details.inspectedBy} onChange={(value) => updateDetail("inspectedBy", value)} />
                                     <AdminField label="Approved By" value={details.approvedBy} onChange={(value) => updateDetail("approvedBy", value)} />
                                 </div>
-                                <AdminField label="Dispatch Status" value={details.dispatchStatus} onChange={(value) => updateDetail("dispatchStatus", value)} />
-                                <AdminField label="Remarks" rows="3" value={details.remarks} onChange={(value) => updateDetail("remarks", value)} />
+                                <AdminField label="Final Remarks" rows="3" value={details.remarks} onChange={(value) => updateDetail("remarks", value)} />
                                 <div className="grid sm:grid-cols-3 gap-3">
                                     <button type="button" onClick={saveDraft} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Save Draft</button>
                                     <button type="button" onClick={() => window.print()} className="rounded-md bg-blue-700 px-4 py-3 text-sm font-extrabold text-white hover:bg-blue-600">Print / PDF</button>
@@ -2444,124 +2673,91 @@
                             </div>
                         </div>
 
-                        <div className="print-document pdir-print-document bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-                            <div className="pdir-print-header bg-white border-b-4 border-slate-950 p-7">
-                                <div className="pdir-header-row flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 shrink-0"><KDLogo className="w-14 h-14" /></div>
-                                        <div>
-                                            <h2 className="text-3xl font-extrabold text-slate-950 leading-tight">{details.companyName}</h2>
-                                            <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">{details.companyAddress}</p>
-                                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                                                <span>Email: {details.companyEmail}</span>
-                                                <span>GSTIN: {details.companyGst}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 min-w-[240px] md:text-right">
-                                        <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-blue-700">PDIR</p>
-                                        <p className="text-2xl font-extrabold text-slate-950 mt-2">Pre-Dispatch Inspection Report</p>
-                                        <p className="text-sm font-bold text-slate-500 mt-1">{details.reportNo}</p>
+                        <div className="print-document pdir-print-document bg-white shadow-xl overflow-hidden">
+                            <div className="pdir-sheet-frame">
+                                <div className="pdir-company-header">
+                                    <div className="pdir-company-title">{details.companyName}</div>
+                                    <div className="pdir-company-meta">
+                                        <span>Website: <strong>{details.companyWebsite}</strong></span>
+                                        <span>Email: <strong>{details.companyEmail}</strong></span>
                                     </div>
                                 </div>
-                            </div>
+                                <div className="pdir-title-bar">Pre-Dispatch Inspection Report (PDIR)</div>
 
-                            <div className="pdir-print-body p-7">
-                                <div className="pdir-summary-grid grid md:grid-cols-4 gap-3">
-                                    {summaryCards.map(([label, value]) => (
-                                        <div key={label} className={`pdir-card rounded-lg border border-slate-200 p-3 ${label === "Overall Status" && overallStatus === "Approved for dispatch" ? "bg-blue-700 text-white" : "bg-slate-50 text-slate-950"}`}>
-                                            <p className={`text-[10px] font-extrabold uppercase tracking-[0.18em] ${label === "Overall Status" && overallStatus === "Approved for dispatch" ? "text-blue-100" : "text-slate-500"}`}>{label}</p>
-                                            <p className="mt-1 text-lg font-extrabold">{value}</p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="pdir-print-section pdir-detail-grid grid md:grid-cols-2 gap-5 mt-6">
-                                    <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-950 px-4 py-3 font-extrabold text-white">Customer & Order</div>
-                                        <div className="grid sm:grid-cols-2 gap-0 text-sm">
-                                            {orderDetails.map(([label, value]) => (
-                                                <div key={label} className="pdir-card border-t border-slate-100 p-3">
-                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                                                    <p className="mt-1 font-extrabold text-slate-950 break-words">{value}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                        <div className="bg-slate-950 px-4 py-3 font-extrabold text-white">Product Details</div>
-                                        <div className="grid sm:grid-cols-2 gap-0 text-sm">
-                                            {productDetails.map(([label, value]) => (
-                                                <div key={label} className="pdir-card border-t border-slate-100 p-3">
-                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                                                    <p className="mt-1 font-extrabold text-slate-950 break-words">{value}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pdir-print-section rounded-lg border border-slate-200 overflow-hidden mt-6">
-                                    <div className="bg-blue-50 px-4 py-3 flex items-center justify-between gap-3">
-                                        <span className="font-extrabold text-blue-900">Inspection Results</span>
-                                        <span className="text-xs font-extrabold text-blue-800">{checks.length} checkpoints</span>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="pdir-print-table w-full text-sm">
-                                            <colgroup>
-                                                <col style={{ width: "6%" }} />
-                                                <col style={{ width: "21%" }} />
-                                                <col style={{ width: "24%" }} />
-                                                <col style={{ width: "18%" }} />
-                                                <col style={{ width: "10%" }} />
-                                                <col style={{ width: "21%" }} />
-                                            </colgroup>
-                                            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-                                                <tr>
-                                                    {["Sr.", "Parameter", "Specification", "Observed", "Result", "Remarks"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {checks.map((check, index) => (
-                                                    <tr key={index} className="border-t border-slate-100 align-top">
-                                                        <td className="p-3 font-bold">{index + 1}</td>
-                                                        <td className="p-3">{check.parameter}</td>
-                                                        <td className="p-3">{check.specification || "-"}</td>
-                                                        <td className="p-3">{check.observed || "-"}</td>
-                                                        <td className="p-3"><span className={`rounded px-2 py-1 text-xs font-extrabold ${check.result === "OK" ? "bg-emerald-50 text-emerald-700" : check.result === "N/A" ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"}`}>{check.result}</span></td>
-                                                        <td className="p-3">{check.remarks || "-"}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div className="pdir-remarks rounded-xl bg-slate-50 border border-slate-200 p-5">
-                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-slate-500">Final Remarks</p>
-                                    <p className="text-slate-700 mt-2 leading-relaxed">{details.remarks}</p>
-                                </div>
-
-                                <div className="pdir-signature-grid mt-7 flex flex-col sm:flex-row gap-6 text-sm">
-                                    <div>
-                                        <p className="text-slate-500 font-bold">Inspection Location</p>
-                                        <p className="font-extrabold text-slate-950 mt-1">{details.inspectionLocation}</p>
-                                    </div>
-                                    <div className="grid sm:grid-cols-2 gap-6 sm:min-w-[420px]">
-                                        {signatories.map(signatory => (
-                                            <div key={signatory.label} className="pdir-signature-card">
-                                                <div className="pdir-signature-mark signature-mark min-h-[44px] text-3xl leading-none text-slate-950 flex items-end">
-                                                    {signatory.name}
-                                                </div>
-                                                <div className="border-t border-slate-300 pt-3 mt-2">
-                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">{signatory.label}</p>
-                                                    <p className="font-extrabold text-slate-950 mt-1">{signatory.name || "-"}</p>
-                                                    <p className="text-xs font-bold text-slate-500 mt-1">{signatory.role}</p>
-                                                </div>
-                                            </div>
+                                <table className="pdir-meta-table">
+                                    <tbody>
+                                        {pdirDetailRows.map(([leftLabel, leftValue, rightLabel, rightValue]) => (
+                                            <tr key={leftLabel}>
+                                                <td className="pdir-label-cell">{leftLabel}</td>
+                                                <td className="pdir-value-cell">{pdirDisplay(leftValue)}</td>
+                                                <td className="pdir-label-cell">{rightLabel}</td>
+                                                <td className="pdir-value-cell">{pdirDisplay(rightValue)}</td>
+                                            </tr>
                                         ))}
-                                    </div>
+                                    </tbody>
+                                </table>
+
+                                <div className="pdir-section-bar">Inspection Checklist</div>
+                                <table className="pdir-checklist-table">
+                                    <colgroup>
+                                        <col style={{ width: "6%" }} />
+                                        <col style={{ width: "20%" }} />
+                                        <col style={{ width: "30%" }} />
+                                        <col style={{ width: "19%" }} />
+                                        <col style={{ width: "17%" }} />
+                                        <col style={{ width: "8%" }} />
+                                    </colgroup>
+                                    <thead>
+                                        <tr>
+                                            {["S. No.", "Inspection Parameter", "Required Specification as per Drawing", "Method / Instrument", "Observation / Actual", "Status"].map(head => <th key={head}>{head}</th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {checks.map((check, index) => (
+                                            <tr key={index}>
+                                                <td className="text-center font-bold">{index + 1}</td>
+                                                <td>{pdirDisplay(check.parameter)}</td>
+                                                <td>{pdirDisplay(check.specification)}</td>
+                                                <td>{pdirDisplay(check.method)}</td>
+                                                <td>{pdirDisplay(check.observation)}</td>
+                                                <td className="pdir-status-cell">{pdirDisplay(check.status)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div className="pdir-section-bar">Drawing Notes / Acceptance Basis</div>
+                                <table className="pdir-notes-table">
+                                    <tbody>
+                                        {drawingNotes.map(note => (
+                                            <tr key={note}><td>{note}</td></tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div className="pdir-final-remarks">
+                                    <div className="pdir-final-remarks-label">Final Remarks</div>
+                                    <div className="pdir-remarks-writing">{pdirDisplay(details.remarks)}</div>
                                 </div>
+
+                                <table className="pdir-signature-table">
+                                    <tbody>
+                                        <tr>
+                                            {signatories.map(signatory => (
+                                                <React.Fragment key={signatory.label}>
+                                                    <td className="pdir-signature-label">{signatory.label}</td>
+                                                    <td className="pdir-signature-title">Name / Sign / Date</td>
+                                                    <td className="pdir-signature-box">
+                                                        <div className="pdir-signature-mark signature-mark">{signatory.name}</div>
+                                                        <div>{signatory.name ? signatureDate : ""}</div>
+                                                    </td>
+                                                </React.Fragment>
+                                            ))}
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div className="pdir-footer-note">This PDIR template has been prepared from the supplied product drawing. Actual observations/status should be completed after physical inspection before dispatch.</div>
                             </div>
                         </div>
                     </div>
