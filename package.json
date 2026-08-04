@@ -6,7 +6,8 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles.css -o ./assets/site.css --minify",
     "build:js": "esbuild ./src/app.jsx --bundle --minify --target=es2020 --format=iife --outfile=./assets/app.js",
-    "build": "npm run build:css && npm run build:js",
+    "build:public": "rm -rf public && mkdir public && cp index.html logo-kde.png public/ && cp -R assets products public/",
+    "build": "npm run build:css && npm run build:js && npm run build:public",
     "dev": "npx serve ."
   },
   "dependencies": {
