@@ -1,0 +1,390 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+            --kd-bg: #f4f6f8;
+            --kd-navy: #0f2742;
+            --kd-blue: #1d4ed8;
+            --kd-steel: #64748b;
+            --kd-amber: #f59e0b;
+            --kd-charcoal: #18202f;
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Manrope', sans-serif; background: var(--kd-bg); color: var(--kd-charcoal); }
+        .hero-bg {
+            background-color: #102a43;
+            background-image: url('../products/warehouse.png');
+            background-position: center;
+            background-size: cover;
+            isolation: isolate;
+        }
+        .hero-bg::before {
+            background: rgba(7, 22, 36, 0.86);
+            content: "";
+            inset: 0;
+            position: absolute;
+            z-index: 0;
+        }
+        .industrial-grid { background: #f8fafc; }
+        .card-rise { transition: border-color 180ms ease, box-shadow 180ms ease; box-shadow: 0 8px 20px rgba(15, 39, 66, 0.05); }
+        .card-rise:hover { box-shadow: 0 14px 28px rgba(15, 39, 66, 0.10); border-color: rgba(29, 78, 216, 0.35); }
+        .modal-backdrop { background: rgba(15, 23, 42, 0.68); }
+        .particle-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .particle-canvas { width: 100%; height: 100%; display: block; opacity: 0.44; }
+        .signature-mark {
+            font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
+            letter-spacing: 0;
+        }
+        .pdir-print-document {
+            color: #111827;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .pdir-sheet-frame {
+            border: 2px solid #111827;
+            background: #ffffff;
+        }
+        .pdir-company-header {
+            padding: 14px 18px 10px;
+            border-bottom: 1px solid #111827;
+            display: grid;
+            grid-template-columns: 62px 1fr 62px;
+            align-items: center;
+            column-gap: 12px;
+            text-align: center;
+        }
+        .pdir-company-logo {
+            grid-column: 1;
+            width: 58px;
+            height: 58px;
+        }
+        .pdir-company-content {
+            grid-column: 2;
+        }
+        .pdir-company-title {
+            font-size: 30px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .pdir-company-meta {
+            margin-top: 6px;
+            font-size: 13px;
+            line-height: 1.2;
+            color: #111827;
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .pdir-title-bar,
+        .pdir-section-bar {
+            background: #111827;
+            color: #ffffff;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .pdir-title-bar {
+            text-align: center;
+            font-size: 19px;
+            line-height: 1.1;
+            padding: 8px 10px;
+        }
+        .pdir-section-bar {
+            margin-top: 12px;
+            font-size: 15px;
+            padding: 5px 8px;
+        }
+        .pdir-meta-table,
+        .pdir-checklist-table,
+        .pdir-notes-table,
+        .pdir-signature-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .pdir-meta-table td,
+        .pdir-checklist-table th,
+        .pdir-checklist-table td,
+        .pdir-notes-table td,
+        .pdir-signature-table td {
+            border: 1px solid #374151;
+            vertical-align: middle;
+        }
+        .pdir-meta-table td {
+            padding: 7px 10px;
+            font-size: 13px;
+            line-height: 1.2;
+        }
+        .pdir-label-cell {
+            width: 18%;
+            background: #f3f4f6;
+            font-weight: 800;
+        }
+        .pdir-value-cell {
+            width: 32%;
+            font-weight: 600;
+        }
+        .pdir-checklist-table th {
+            background: #e5e7eb;
+            padding: 7px 8px;
+            font-size: 12px;
+            line-height: 1.15;
+            text-align: left;
+            font-weight: 900;
+        }
+        .pdir-checklist-table td {
+            padding: 7px 8px;
+            font-size: 12px;
+            line-height: 1.18;
+        }
+        .pdir-status-cell {
+            text-align: center;
+            font-weight: 900;
+        }
+        .pdir-notes-table td {
+            padding: 6px 9px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .pdir-final-remarks {
+            margin-top: 10px;
+            border: 1px solid #374151;
+        }
+        .pdir-final-remarks-label {
+            background: #e5e7eb;
+            border-bottom: 1px solid #374151;
+            padding: 7px 9px;
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .pdir-remarks-writing {
+            min-height: 52px;
+            padding: 12px 14px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .pdir-signature-table {
+            margin-top: 12px;
+        }
+        .pdir-signature-table td {
+            padding: 7px 9px;
+            font-size: 12px;
+        }
+        .pdir-signature-label {
+            width: 16%;
+            background: #f3f4f6;
+            font-weight: 900;
+        }
+        .pdir-signature-title {
+            width: 17%;
+            font-weight: 800;
+        }
+        .pdir-signature-box {
+            width: 25%;
+        }
+        .pdir-footer-note {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .rmtc-print-document {
+            font-family: "Times New Roman", Times, serif;
+            color: #111827;
+            position: relative;
+        }
+        .rmtc-document-content { position: relative; z-index: 1; }
+        .rmtc-provider-name {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 24px;
+            line-height: 1.15;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .rmtc-provider-location {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 15px;
+            line-height: 1.2;
+            text-align: center;
+            font-weight: 700;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        .rmtc-date-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 22px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .rmtc-detail-table, .rmtc-print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "Times New Roman", Times, serif;
+        }
+        .rmtc-detail-table td {
+            padding: 4px 5px;
+            vertical-align: top;
+            font-size: 15px;
+            line-height: 1.2;
+        }
+        .rmtc-detail-table .rmtc-row-no { width: 30px; text-align: right; padding-right: 8px; }
+        .rmtc-detail-table .rmtc-row-label { width: 190px; }
+        .rmtc-detail-table .rmtc-row-colon { width: 12px; text-align: center; }
+        .rmtc-print-table th,
+        .rmtc-print-table td {
+            border: 1px solid #4b5563;
+            padding: 6px 8px;
+            font-size: 14px;
+            line-height: 1.15;
+            vertical-align: middle;
+        }
+        .rmtc-print-table th {
+            background: transparent;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-align: left;
+        }
+        .rmtc-signature-name {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 22px;
+            line-height: 1.1;
+            min-height: 46px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .particle-canvas { opacity: 0.14; }
+        }
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+        @media print {
+            nav, footer, .no-print { display: none !important; }
+            body { background: #ffffff !important; }
+            main { padding-top: 0 !important; }
+            .print-page-wrap { padding: 0 !important; background: #ffffff !important; min-height: 0 !important; }
+            .print-document { width: 100% !important; max-width: 100% !important; margin: 0 !important; box-shadow: none !important; border: 0 !important; }
+            .payslip-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 10px !important;
+                line-height: 1.25 !important;
+            }
+            .payslip-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .payslip-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .payslip-print-header { padding: 5mm !important; }
+            .payslip-print-body { padding: 5mm !important; }
+            .payslip-header-row, .payslip-top-row, .payslip-net-bar {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+            .payslip-info-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 2.5mm !important; }
+            .payslip-info-grid > div { padding: 2mm !important; }
+            .payslip-amount-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 3mm !important; }
+            .payslip-print-section { margin-top: 4mm !important; }
+            .payslip-print-table th, .payslip-print-table td { padding: 2mm 3mm !important; }
+            .payslip-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .payslip-net-bar { margin-top: 4mm !important; padding: 4mm !important; }
+            .payslip-print-notes { margin-top: 4mm !important; grid-template-columns: 1fr 60mm !important; }
+            .payslip-print-document .signature-mark { font-size: 20px !important; }
+            .payslip-print-document .text-4xl { font-size: 20px !important; line-height: 1.05 !important; }
+            .payslip-print-document .text-3xl { font-size: 18px !important; line-height: 1.1 !important; }
+            .payslip-print-document .text-2xl { font-size: 15px !important; line-height: 1.15 !important; }
+            .payslip-print-document .text-xl { font-size: 13px !important; line-height: 1.2 !important; }
+            .payslip-print-document .text-sm { font-size: 10px !important; }
+            .payslip-print-document .text-xs { font-size: 9px !important; }
+            .payslip-print-document .text-\[10px\] { font-size: 8px !important; }
+            .pdir-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .pdir-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 8.5px !important;
+                line-height: 1.14 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+            }
+            .pdir-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .pdir-sheet-frame { border-width: 1.3pt !important; }
+            .pdir-company-header { padding: 3mm 4mm 2.2mm !important; }
+            .pdir-company-title { font-size: 18px !important; line-height: 1 !important; }
+            .pdir-company-meta { margin-top: 1.3mm !important; gap: 5mm !important; font-size: 8.8px !important; }
+            .pdir-title-bar { padding: 1.8mm 2mm !important; font-size: 12.5px !important; }
+            .pdir-section-bar { margin-top: 2.2mm !important; padding: 1mm 1.6mm !important; font-size: 9.8px !important; }
+            .pdir-meta-table td { padding: 1.25mm 1.6mm !important; font-size: 8.5px !important; line-height: 1.15 !important; }
+            .pdir-checklist-table { table-layout: fixed !important; }
+            .pdir-checklist-table th,
+            .pdir-checklist-table td { padding: 1mm 1.2mm !important; font-size: 7.8px !important; line-height: 1.1 !important; }
+            .pdir-checklist-table tr,
+            .pdir-notes-table tr,
+            .pdir-signature-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .pdir-notes-table td { padding: 1mm 1.4mm !important; font-size: 7.8px !important; line-height: 1.1 !important; }
+            .pdir-final-remarks { margin-top: 2mm !important; }
+            .pdir-final-remarks-label { padding: 1mm 1.4mm !important; font-size: 8px !important; }
+            .pdir-remarks-writing { min-height: 9mm !important; padding: 2mm 2.5mm !important; font-size: 12px !important; }
+            .pdir-signature-table { margin-top: 2mm !important; }
+            .pdir-signature-table td { padding: 1mm 1.4mm !important; font-size: 7.8px !important; }
+            .pdir-print-document .pdir-signature-mark { font-size: 14px !important; min-height: 6mm !important; }
+            .pdir-footer-note { margin-top: 1.4mm !important; font-size: 7.2px !important; }
+            .rmtc-page-grid {
+                display: block !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .rmtc-print-document {
+                width: 194mm !important;
+                max-width: 194mm !important;
+                min-height: 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                font-size: 9px !important;
+                line-height: 1.16 !important;
+                font-family: "Times New Roman", Times, serif !important;
+            }
+            .rmtc-print-document * {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+            .rmtc-print-body { padding: 8mm 9mm !important; }
+            .rmtc-provider-name { font-size: 18px !important; }
+            .rmtc-provider-location { font-size: 12px !important; }
+            .rmtc-date-row { margin-top: 7mm !important; font-size: 12px !important; }
+            .rmtc-detail-table td { padding: 1mm 1.3mm !important; font-size: 11px !important; }
+            .rmtc-print-section { margin-top: 4mm !important; }
+            .rmtc-print-table { min-width: 0 !important; table-layout: fixed !important; }
+            .rmtc-print-table th, .rmtc-print-table td { padding: 1.1mm 1.5mm !important; font-size: 10px !important; }
+            .rmtc-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .rmtc-note-box { margin-top: 4mm !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+            .rmtc-signature-name { font-size: 13px !important; min-height: 7mm !important; }
+        }
