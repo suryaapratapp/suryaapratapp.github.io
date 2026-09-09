@@ -257,6 +257,43 @@
             align-items: flex-end;
             justify-content: flex-end;
         }
+        .rmtc-signature-block { margin-left: auto; }
+        .rmtc-signature-area {
+            min-height: 112px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            gap: 14px;
+        }
+        .rmtc-company-stamp {
+            width: 104px;
+            height: 104px;
+            flex: 0 0 104px;
+            color: #244f9e;
+            transform: rotate(-7deg);
+        }
+        .rmtc-company-stamp svg { width: 100%; height: 100%; overflow: visible; }
+        .rmtc-company-stamp circle,
+        .rmtc-company-stamp path {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        .rmtc-company-stamp path { stroke: none; }
+        .rmtc-company-stamp-ring {
+            fill: currentColor;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+        }
+        .rmtc-company-stamp-centre {
+            fill: currentColor;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
         @media (prefers-reduced-motion: reduce) {
             .particle-canvas { opacity: 0.14; }
         }
@@ -387,4 +424,6 @@
             .rmtc-print-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
             .rmtc-note-box { margin-top: 4mm !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
             .rmtc-signature-name { font-size: 13px !important; min-height: 7mm !important; }
+            .rmtc-signature-area { min-height: 24mm !important; gap: 3mm !important; }
+            .rmtc-company-stamp { width: 23mm !important; height: 23mm !important; flex-basis: 23mm !important; }
         }

@@ -2883,7 +2883,10 @@ import {
 
         const parseRMTCThickness = (value, materialKey = "Bakelite") => {
             const range = getRMTCThicknessRange(materialKey);
-            const numeric = Number(String(value || "").replace(/[^\d.]/g, ""));
+            const values = String(value || "").match(/\d+(?:\.\d+)?/g) || [];
+            // For a thickness range, use the upper limit to select conservative
+            // tolerance and test values while retaining the full range on the certificate.
+            const numeric = values.length ? Math.max(...values.map(Number)) : NaN;
             if (!Number.isFinite(numeric)) return range.fallback;
             return Math.min(range.max, Math.max(range.min, numeric));
         };
@@ -2899,10 +2902,21 @@ import {
         };
 
         const getRMTCMaterialThicknessText = (value, materialKey) => {
-            const thickness = parseRMTCThickness(value, materialKey);
-            const decimals = Number.isInteger(thickness) ? 0 : 1;
-            return `${formatRMTCNumber(thickness, decimals)} MM`;
+            const rawValue = String(value || "").trim();
+            if (!rawValue) return "";
+            const allowedRange = getRMTCThicknessRange(materialKey);
+            const values = rawValue.match(/\d+(?:\.\d+)?/g) || [];
+            if (!values.length) return rawValue.toUpperCase();
+            const normalisedValues = values.slice(0, 2).map(item => {
+                const thickness = Math.min(allowedRange.max, Math.max(allowedRange.min, Number(item)));
+                return formatRMTCNumber(thickness, Number.isInteger(thickness) ? 0 : 1);
+            });
+            return normalisedValues.length > 1
+                ? `${normalisedValues[0]} MM TO ${normalisedValues[1]} MM`
+                : `${normalisedValues[0]} MM`;
         };
+
+        const hasRMTCValue = value => value !== null && value !== undefined && String(value).trim() !== "";
 
         const getBakeliteTolerance = (thicknessValue) => {
             const thickness = parseRMTCThickness(thicknessValue, "Bakelite");
@@ -3107,7 +3121,9 @@ import {
                     tolerance: getBakeliteTolerance("5.0"),
                     remarks: "Material supplied to K.D. Enterprises against the above product details and supplier raw material test data.",
                     authorisedBy: "",
-                    authorisedRole: "Authorised Signatory"
+                    authorisedRole: "Authorised Signatory",
+                    showCompanyStamp: false,
+                    stampText: "ARCHIDPLY INDUSTRIES LTD."
                 },
                 tests: getBakeliteAutoTests("5.0")
             },
@@ -3133,7 +3149,9 @@ import {
                     tolerance: getGlassEpoxyTolerance("5.0"),
                     remarks: "Material supplied to K.D. Enterprises against the above product details and supplier raw material test data.",
                     authorisedBy: "",
-                    authorisedRole: "Authorised Signatory"
+                    authorisedRole: "Authorised Signatory",
+                    showCompanyStamp: false,
+                    stampText: "FIBER GLASS INSULATION PRODUCTS"
                 },
                 tests: getGlassEpoxyAutoTests("5.0")
             }
@@ -3178,7 +3196,6 @@ import {
             const { details, tests } = draft;
             const selectedTemplate = RMTC_MATERIAL_TEMPLATES[details.materialKey] || RMTC_MATERIAL_TEMPLATES.Bakelite;
             const materialOptions = Object.entries(RMTC_MATERIAL_TEMPLATES);
-            const thicknessRange = getRMTCThicknessRange(details.materialKey);
             const materialThicknessText = getRMTCMaterialThicknessText(details.thickness, details.materialKey);
             const autoValueNote = details.materialKey === "GlassEpoxy"
                 ? "Glass Epoxy / FRP report values auto-populate from material thickness between 2 mm and 80 mm."
@@ -3221,16 +3238,20 @@ import {
             const certificateRows = [
                 ["Customer's Name", details.customerName],
                 ["Material Type", details.productName],
-                ["Code No.", details.codeNo || "-"],
-                ["Grade", details.grade || "-"],
+                ["Code No.", details.codeNo],
+                ["Grade", details.grade],
                 ["Material Thickness", materialThicknessText],
-                ["Lot / Load No.", details.lotNo || "-"],
-                ["Colour", details.colour || "-"],
-                ["Quantity", details.quantity || "-"],
-                ["Invoice No.", details.invoiceNo || "-"],
+                ["Lot / Load No.", details.lotNo],
+                ["Colour", details.colour],
+                ["Quantity", details.quantity],
+                ["Invoice No.", details.invoiceNo],
                 ["Specification", details.specification],
-                ["Tolerance", details.tolerance || "-"]
-            ];
+                ["Tolerance", details.tolerance]
+            ].filter(([, value]) => hasRMTCValue(value));
+            const visibleTests = tests.filter(test => [test.property, test.unit, test.observed, test.required].some(hasRMTCValue));
+            const showStamp = Boolean(details.showCompanyStamp && hasRMTCValue(details.stampText));
+            const showGeneratedDetails = hasRMTCValue(details.customerName) || hasRMTCValue(details.certificateDate);
+            const showSignatureDetails = hasRMTCValue(details.providerName) || hasRMTCValue(details.authorisedBy) || hasRMTCValue(details.authorisedRole) || showStamp;
 
             return (
                 <div className="pt-32 pb-24 bg-slate-100 min-h-screen print-page-wrap">
@@ -3257,13 +3278,13 @@ import {
                                     <AdminField label="Certificate Date" type="date" value={details.certificateDate} onChange={(value) => updateDetail("certificateDate", value)} />
                                     <AdminField label="Generated Date" type="date" value={details.generatedDate} onChange={(value) => updateDetail("generatedDate", value)} />
                                     <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
-                                    <AdminField label="Material Thickness" type="number" min={thicknessRange.min} max={thicknessRange.max} step="0.1" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} suffix="mm" />
+                                    <AdminField label="Material Thickness / Range" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} />
                                 </div>
                                 <div className="mt-3 space-y-3">
                                     <AdminField label="Certificate Provider" value={details.providerName} onChange={(value) => updateDetail("providerName", value)} />
                                     <AdminField label="Provider Location" value={details.providerLocation} onChange={(value) => updateDetail("providerLocation", value)} />
                                 </div>
-                                <p className="mt-3 text-xs font-bold text-blue-700">{autoValueNote}</p>
+                                <p className="mt-3 text-xs font-bold text-blue-700">{autoValueNote} Enter a single value or a range, for example 5 mm to 12 mm. Ranges use their upper value for auto-filled results.</p>
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -3311,6 +3332,13 @@ import {
                                     <AdminField label="Authorised By" value={details.authorisedBy} onChange={(value) => updateDetail("authorisedBy", value)} />
                                     <AdminField label="Authorised Role" value={details.authorisedRole} onChange={(value) => updateDetail("authorisedRole", value)} />
                                 </div>
+                                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                    <label className="flex cursor-pointer items-center gap-3 text-sm font-extrabold text-slate-700">
+                                        <input type="checkbox" checked={Boolean(details.showCompanyStamp)} onChange={(e) => updateDetail("showCompanyStamp", e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500" />
+                                        Add circular company stamp beside authorised signatory
+                                    </label>
+                                    {details.showCompanyStamp && <div className="mt-3"><AdminField label="Company Stamp Text" value={details.stampText} onChange={(value) => updateDetail("stampText", value)} /></div>}
+                                </div>
                                 <div className="grid sm:grid-cols-3 gap-3 mt-4">
                                     <button type="button" onClick={saveDraft} className="rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-slate-800">Save Draft</button>
                                     <button type="button" onClick={() => window.print()} className="rounded-md bg-blue-700 px-4 py-3 text-sm font-extrabold text-white hover:bg-blue-600">Print / PDF</button>
@@ -3322,28 +3350,28 @@ import {
                         <div className="print-document rmtc-print-document bg-white border border-slate-300 overflow-hidden">
                             <div className="rmtc-document-content rmtc-print-body p-10">
                                 <div className="text-center">
-                                    <div className="rmtc-provider-name">{details.providerName}</div>
-                                    {details.providerLocation && <div className="rmtc-provider-location">{details.providerLocation}</div>}
+                                    {hasRMTCValue(details.providerName) && <div className="rmtc-provider-name">{details.providerName}</div>}
+                                    {hasRMTCValue(details.providerLocation) && <div className="rmtc-provider-location">{details.providerLocation}</div>}
                                 </div>
 
-                                <div className="rmtc-date-row">
+                                {hasRMTCValue(details.generatedDate || details.certificateDate) && <div className="rmtc-date-row">
                                     <span>Date: {formatDate(details.generatedDate || details.certificateDate)}</span>
-                                </div>
+                                </div>}
 
-                                <table className="rmtc-detail-table mt-6">
+                                {certificateRows.length > 0 && <table className="rmtc-detail-table mt-6">
                                     <tbody>
                                         {certificateRows.map(([label, value], index) => (
                                             <tr key={label}>
                                                 <td className="rmtc-row-no">{index + 1})</td>
                                                 <td className="rmtc-row-label">{label}</td>
                                                 <td className="rmtc-row-colon">:</td>
-                                                <td>{value || "-"}</td>
+                                                <td>{value}</td>
                                             </tr>
                                         ))}
                                     </tbody>
-                                </table>
+                                </table>}
 
-                                <div className="rmtc-print-section mt-6">
+                                {visibleTests.length > 0 && <div className="rmtc-print-section mt-6">
                                     <table className="rmtc-print-table">
                                         <colgroup>
                                             <col style={{ width: "7%" }} />
@@ -3358,38 +3386,51 @@ import {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {tests.map((test, index) => (
+                                            {visibleTests.map((test, index) => (
                                                 <tr key={index}>
                                                     <td className="text-center">{index + 1}</td>
-                                                    <td>{test.property || "-"}</td>
-                                                    <td>{test.unit || "-"}</td>
-                                                    <td>{test.observed || "-"}</td>
-                                                    <td>{test.required || "-"}</td>
+                                                    <td>{test.property}</td>
+                                                    <td>{test.unit}</td>
+                                                    <td>{test.observed}</td>
+                                                    <td>{test.required}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </div>}
 
-                                <div className="rmtc-note-box mt-5 text-sm leading-snug">
-                                    <p><strong>Note:</strong> {details.tolerance}</p>
-                                    <p className="mt-2"><strong>Remarks:</strong> {details.remarks}</p>
-                                </div>
+                                {(hasRMTCValue(details.tolerance) || hasRMTCValue(details.remarks)) && <div className="rmtc-note-box mt-5 text-sm leading-snug">
+                                    {hasRMTCValue(details.tolerance) && <p><strong>Note:</strong> {details.tolerance}</p>}
+                                    {hasRMTCValue(details.remarks) && <p className={hasRMTCValue(details.tolerance) ? "mt-2" : ""}><strong>Remarks:</strong> {details.remarks}</p>}
+                                </div>}
 
-                                <div className="rmtc-signature-grid mt-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 text-sm">
-                                    <div>
-                                        <p><strong>Generated For:</strong> {details.customerName}</p>
-                                        <p className="mt-1"><strong>Certificate Date:</strong> {formatDate(details.certificateDate)}</p>
-                                    </div>
-                                    <div className="min-w-[260px] text-right">
-                                        <p>For {details.providerName}</p>
-                                        <div className="rmtc-signature-name">{details.authorisedBy}</div>
-                                        <div className="border-t border-slate-500 pt-2 mt-2">
-                                            <p><strong>{details.authorisedBy || "-"}</strong></p>
-                                            <p>{details.authorisedRole}</p>
+                                {(showGeneratedDetails || showSignatureDetails) && <div className="rmtc-signature-grid mt-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 text-sm">
+                                    {showGeneratedDetails && <div>
+                                        {hasRMTCValue(details.customerName) && <p><strong>Generated For:</strong> {details.customerName}</p>}
+                                        {hasRMTCValue(details.certificateDate) && <p className={hasRMTCValue(details.customerName) ? "mt-1" : ""}><strong>Certificate Date:</strong> {formatDate(details.certificateDate)}</p>}
+                                    </div>}
+                                    {showSignatureDetails && <div className="rmtc-signature-block min-w-[260px] text-right">
+                                        {hasRMTCValue(details.providerName) && <p>For {details.providerName}</p>}
+                                        <div className="rmtc-signature-area">
+                                            {showStamp && <div className="rmtc-company-stamp" aria-label={`Company stamp: ${details.stampText}`}>
+                                                <svg viewBox="0 0 110 110" role="img">
+                                                    <defs><path id="rmtc-stamp-circle" d="M 55,8 A 47,47 0 1,1 54.9,8" /></defs>
+                                                    <circle cx="55" cy="55" r="49" />
+                                                    <circle cx="55" cy="55" r="37" />
+                                                    <text className="rmtc-company-stamp-ring"><textPath href="#rmtc-stamp-circle" startOffset="50%" textAnchor="middle">{details.stampText.toUpperCase()}</textPath></text>
+                                                    <text className="rmtc-company-stamp-centre" x="55" y="51" textAnchor="middle">COMPANY</text>
+                                                    <text className="rmtc-company-stamp-centre" x="55" y="64" textAnchor="middle">STAMP</text>
+                                                </svg>
+                                            </div>}
+                                            {hasRMTCValue(details.authorisedBy) && <div className="rmtc-signature-name">{details.authorisedBy}</div>}
                                         </div>
-                                    </div>
-                                </div>
+                                        {(hasRMTCValue(details.authorisedBy) || hasRMTCValue(details.authorisedRole)) && <div className="border-t border-slate-500 pt-2 mt-2">
+                                            {hasRMTCValue(details.authorisedBy) && <p><strong>{details.authorisedBy}</strong></p>}
+                                            {hasRMTCValue(details.authorisedRole) && <p>{details.authorisedRole}</p>}
+                                        </div>
+                                        }
+                                    </div>}
+                                </div>}
                             </div>
                         </div>
                     </div>
