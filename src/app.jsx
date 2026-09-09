@@ -2918,6 +2918,33 @@ import {
 
         const hasRMTCValue = value => value !== null && value !== undefined && String(value).trim() !== "";
 
+        const getRMTCStampLines = value => {
+            const words = String(value || "").trim().toUpperCase().split(/\s+/).filter(Boolean);
+            if (!words.length) return [];
+            const characterCount = words.join(" ").length;
+            const preferredLineCount = characterCount > 22 ? 3 : characterCount > 13 ? 2 : 1;
+            const lineCount = Math.min(words.length, preferredLineCount);
+            const lines = [];
+            let remainingWords = [...words];
+            for (let lineIndex = 0; lineIndex < lineCount && remainingWords.length; lineIndex += 1) {
+                const remainingLines = lineCount - lineIndex;
+                if (remainingLines === 1) {
+                    lines.push(remainingWords.join(" "));
+                    break;
+                }
+                const remainingCharacters = remainingWords.join(" ").length;
+                const targetLength = Math.ceil(remainingCharacters / remainingLines);
+                const lineWords = [];
+                while (remainingWords.length > remainingLines - 1) {
+                    const candidate = [...lineWords, remainingWords[0]].join(" ");
+                    if (lineWords.length && candidate.length > targetLength) break;
+                    lineWords.push(remainingWords.shift());
+                }
+                lines.push(lineWords.join(" "));
+            }
+            return lines;
+        };
+
         const getBakeliteTolerance = (thicknessValue) => {
             const thickness = parseRMTCThickness(thicknessValue, "Bakelite");
             if (thickness <= 1) return "Thickness tolerance: +/- 0.10 mm.";
@@ -3250,6 +3277,10 @@ import {
             ].filter(([, value]) => hasRMTCValue(value));
             const visibleTests = tests.filter(test => [test.property, test.unit, test.observed, test.required].some(hasRMTCValue));
             const showStamp = Boolean(details.showCompanyStamp && hasRMTCValue(details.stampText));
+            const stampLines = getRMTCStampLines(details.stampText);
+            const stampLineStart = 54 - ((stampLines.length - 1) * 7);
+            const longestStampLine = Math.max(...stampLines.map(line => line.length), 1);
+            const stampTextSize = Math.max(5, Math.min(8.5, 90 / (longestStampLine * 0.62)));
             const showGeneratedDetails = hasRMTCValue(details.customerName) || hasRMTCValue(details.certificateDate);
             const showSignatureDetails = hasRMTCValue(details.providerName) || hasRMTCValue(details.authorisedBy) || hasRMTCValue(details.authorisedRole) || showStamp;
 
@@ -3414,12 +3445,14 @@ import {
                                         <div className="rmtc-signature-area">
                                             {showStamp && <div className="rmtc-company-stamp" aria-label={`Company stamp: ${details.stampText}`}>
                                                 <svg viewBox="0 0 110 110" role="img">
-                                                    <defs><path id="rmtc-stamp-circle" d="M 55,8 A 47,47 0 1,1 54.9,8" /></defs>
                                                     <circle cx="55" cy="55" r="49" />
-                                                    <circle cx="55" cy="55" r="37" />
-                                                    <text className="rmtc-company-stamp-ring"><textPath href="#rmtc-stamp-circle" startOffset="50%" textAnchor="middle">{details.stampText.toUpperCase()}</textPath></text>
-                                                    <text className="rmtc-company-stamp-centre" x="55" y="51" textAnchor="middle">COMPANY</text>
-                                                    <text className="rmtc-company-stamp-centre" x="55" y="64" textAnchor="middle">STAMP</text>
+                                                    <circle cx="55" cy="55" r="43" />
+                                                    <text className="rmtc-company-stamp-star" x="55" y="29" textAnchor="middle">★</text>
+                                                    {stampLines.map((line, index) => (
+                                                        <text key={`${line}-${index}`} className="rmtc-company-stamp-name" style={{ fontSize: `${stampTextSize}px` }} x="55" y={stampLineStart + (index * 14)} textAnchor="middle">{line}</text>
+                                                    ))}
+                                                    <text className="rmtc-company-stamp-authorised" x="55" y="84" textAnchor="middle">AUTHORISED</text>
+                                                    <text className="rmtc-company-stamp-star" x="55" y="96" textAnchor="middle">★</text>
                                                 </svg>
                                             </div>}
                                             {hasRMTCValue(details.authorisedBy) && <div className="rmtc-signature-name">{details.authorisedBy}</div>}

@@ -273,27 +273,24 @@
             transform: rotate(-7deg);
         }
         .rmtc-company-stamp svg { width: 100%; height: 100%; overflow: visible; }
-        .rmtc-company-stamp circle,
-        .rmtc-company-stamp path {
+        .rmtc-company-stamp circle {
             fill: none;
             stroke: currentColor;
             stroke-width: 2;
         }
-        .rmtc-company-stamp path { stroke: none; }
-        .rmtc-company-stamp-ring {
+        .rmtc-company-stamp-name,
+        .rmtc-company-stamp-authorised,
+        .rmtc-company-stamp-star {
             fill: currentColor;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 8px;
-            font-weight: 800;
-            letter-spacing: 0.6px;
-        }
-        .rmtc-company-stamp-centre {
-            fill: currentColor;
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 10px;
             font-weight: 900;
-            letter-spacing: 1px;
         }
+        .rmtc-company-stamp-name { letter-spacing: 0.45px; }
+        .rmtc-company-stamp-authorised {
+            font-size: 5.5px;
+            letter-spacing: 1.15px;
+        }
+        .rmtc-company-stamp-star { font-size: 7px; }
         @media (prefers-reduced-motion: reduce) {
             .particle-canvas { opacity: 0.14; }
         }
