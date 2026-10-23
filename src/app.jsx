@@ -2876,7 +2876,9 @@ import {
 
         const RMTC_THICKNESS_RANGES = {
             Bakelite: { min: 0.5, max: 80, fallback: 5 },
-            GlassEpoxy: { min: 2, max: 80, fallback: 5 }
+            // Glass Epoxy accepts any non-negative thickness. Values outside the
+            // available test bands use the nearest first/last band automatically.
+            GlassEpoxy: { min: 0, max: Infinity, fallback: 5 }
         };
 
         const getRMTCThicknessRange = (materialKey) => RMTC_THICKNESS_RANGES[materialKey] || RMTC_THICKNESS_RANGES.Bakelite;
@@ -3130,6 +3132,7 @@ import {
                 label: "Bakelite / Phenolic Sheet",
                 details: {
                     materialKey: "Bakelite",
+                    certificateTitle: "RAW MATERIAL TEST CERTIFICATE",
                     providerName: "ARCHIDPLY INDUSTRIES LTD.",
                     providerLocation: "",
                     customerName: "K.D. ENTERPRISES",
@@ -3158,6 +3161,7 @@ import {
                 label: "Glass Epoxy Sheet",
                 details: {
                     materialKey: "GlassEpoxy",
+                    certificateTitle: "RAW MATERIAL TEST CERTIFICATE",
                     providerName: "FIBER GLASS INSULATION PRODUCTS",
                     providerLocation: "INDIA",
                     customerName: "K.D. ENTERPRISES",
@@ -3225,10 +3229,13 @@ import {
             const materialOptions = Object.entries(RMTC_MATERIAL_TEMPLATES);
             const materialThicknessText = getRMTCMaterialThicknessText(details.thickness, details.materialKey);
             const autoValueNote = details.materialKey === "GlassEpoxy"
-                ? "Glass Epoxy / FRP report values auto-populate from material thickness between 2 mm and 80 mm."
+                ? "Glass Epoxy / FRP accepts any thickness. Report values and tolerance auto-populate from the entered thickness; values outside the available test bands use the nearest applicable band."
                 : "Bakelite report values auto-populate from material thickness between 0.5 mm and 80 mm.";
             const updateDetail = (field, value) => setDraft(prev => {
                 const nextDetails = { ...prev.details, [field]: value };
+                if (field === "providerName" && (!hasRMTCValue(prev.details.stampText) || prev.details.stampText === prev.details.providerName)) {
+                    nextDetails.stampText = value;
+                }
                 if (field === "thickness") {
                     return {
                         ...prev,
@@ -3263,6 +3270,7 @@ import {
             const saveDraft = () => localStorage.setItem("kd_rmtc_draft", JSON.stringify(draft));
             const resetDraft = () => setDraft(createDefaultRMTCDraft(details.materialKey));
             const certificateRows = [
+                ["Reference No.", details.refNo],
                 ["Customer's Name", details.customerName],
                 ["Material Type", details.productName],
                 ["Code No.", details.codeNo],
@@ -3305,17 +3313,20 @@ import {
                                         {materialOptions.map(([key, template]) => <option key={key} value={key}>{template.label}</option>)}
                                     </select>
                                 </label>
+                                <p className="mt-2 text-xs text-slate-500">The template supplies starting values only. Every certificate detail below remains editable.</p>
                                 <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                                    <AdminField label="Certificate Heading" value={details.certificateTitle} onChange={(value) => updateDetail("certificateTitle", value)} />
+                                    <AdminField label="Reference No." value={details.refNo} onChange={(value) => updateDetail("refNo", value)} />
                                     <AdminField label="Certificate Date" type="date" value={details.certificateDate} onChange={(value) => updateDetail("certificateDate", value)} />
                                     <AdminField label="Generated Date" type="date" value={details.generatedDate} onChange={(value) => updateDetail("generatedDate", value)} />
                                     <AdminField label="Customer" value={details.customerName} onChange={(value) => updateDetail("customerName", value)} />
                                     <AdminField label="Material Thickness / Range" value={details.thickness} onChange={(value) => updateDetail("thickness", value)} />
                                 </div>
                                 <div className="mt-3 space-y-3">
-                                    <AdminField label="Certificate Provider" value={details.providerName} onChange={(value) => updateDetail("providerName", value)} />
-                                    <AdminField label="Provider Location" value={details.providerLocation} onChange={(value) => updateDetail("providerLocation", value)} />
+                                    <AdminField label="Supplier / Certificate Provider" value={details.providerName} onChange={(value) => updateDetail("providerName", value)} />
+                                    <AdminField label="Supplier Location" value={details.providerLocation} onChange={(value) => updateDetail("providerLocation", value)} />
                                 </div>
-                                <p className="mt-3 text-xs font-bold text-blue-700">{autoValueNote} Enter a single value or a range, for example 5 mm to 12 mm. Ranges use their upper value for auto-filled results.</p>
+                                <p className="mt-3 text-xs font-bold text-blue-700">{autoValueNote} Enter a single value or a range, for example 0.5 mm or 0.5 mm to 12 mm. Ranges use their upper value for auto-filled results.</p>
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -3383,6 +3394,7 @@ import {
                                 <div className="text-center">
                                     {hasRMTCValue(details.providerName) && <div className="rmtc-provider-name">{details.providerName}</div>}
                                     {hasRMTCValue(details.providerLocation) && <div className="rmtc-provider-location">{details.providerLocation}</div>}
+                                    {hasRMTCValue(details.certificateTitle) && <div className="rmtc-certificate-title">{details.certificateTitle}</div>}
                                 </div>
 
                                 {hasRMTCValue(details.generatedDate || details.certificateDate) && <div className="rmtc-date-row">

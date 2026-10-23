@@ -213,6 +213,16 @@
             margin-top: 2px;
             text-transform: uppercase;
         }
+        .rmtc-certificate-title {
+            display: inline-block;
+            margin-top: 14px;
+            border-bottom: 1px solid currentColor;
+            font-size: 18px;
+            line-height: 1.2;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
         .rmtc-date-row {
             display: flex;
             justify-content: flex-end;
@@ -413,6 +423,7 @@
             .rmtc-print-body { padding: 8mm 9mm !important; }
             .rmtc-provider-name { font-size: 18px !important; }
             .rmtc-provider-location { font-size: 12px !important; }
+            .rmtc-certificate-title { margin-top: 4mm !important; font-size: 14px !important; }
             .rmtc-date-row { margin-top: 7mm !important; font-size: 12px !important; }
             .rmtc-detail-table td { padding: 1mm 1.3mm !important; font-size: 11px !important; }
             .rmtc-print-section { margin-top: 4mm !important; }
