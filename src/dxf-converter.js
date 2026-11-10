@@ -1,5 +1,5 @@
 // PDF vector extraction for the admin drawing review tool. Coordinates stay in
-// PDF points until the operator calibrates a known distance in millimetres.
+// PDF points until a scale in millimetres has been reviewed.
 const applyMatrix = (matrix, point) => [
     matrix[0] * point[0] + matrix[2] * point[1] + matrix[4],
     matrix[1] * point[0] + matrix[3] * point[1] + matrix[5]
@@ -92,6 +92,7 @@ export async function extractPdfGeometry(pdfjs, file, pageNumber) {
         const page = await pdf.getPage(pageNumber);
         const [left, bottom, right, top] = page.view;
         const list = await page.getOperatorList();
+        const textContent = await page.getTextContent();
         const OPS = pdfjs.OPS;
         let matrix = [1, 0, 0, 1, 0, 0];
         let stroke = [0, 0, 0];
@@ -124,7 +125,8 @@ export async function extractPdfGeometry(pdfjs, file, pageNumber) {
                 pending = [];
             } else if ([OPS.fill, OPS.eoFill, OPS.endPath, OPS.clip, OPS.eoClip].includes(op)) pending = [];
         }
-        return { width: right - left, height: top - bottom, pageCount: count, entities, left, bottom };
+        return { width: right - left, height: top - bottom, pageCount: count, entities, left, bottom,
+            text: textContent.items.map(item => item.str || "").join(" ") };
     } finally {
         await pdf.destroy();
     }
