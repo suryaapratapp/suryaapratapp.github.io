@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import DxfTool from "./dxf-tool.jsx";
+import { adminBackend, getAuthorizedAdmin } from "./admin-backend.js";
+import { ADMIN_LOGIN_EMAIL, ADMIN_LOGIN_USERNAME } from "./supabase-config.js";
 import {
     ArrowRight, BatteryCharging, Bolt, Box, Calculator, CarFront, Check, ChevronDown, Circle,
     ClipboardCheck, CloudSun, Component, Copy, Drill, Factory, FileCheck2, FileText, FileUp,
@@ -177,12 +180,13 @@ import {
         const INDUSTRIES_SERVED = ["Electrical & Switchgear", "Solar & Renewable Energy", "Railway & Signalling", "EV & Charging Equipment", "Automobile Components", "Industrial Machinery", "Display & Fabrication", "Custom Engineering Parts"];
         const INDUSTRY_COPY = "From electrical insulation plates to custom cut mounting components, KD Enterprises supports manufacturers, panel builders, solar suppliers, railway contractors, EV equipment makers and industrial workshops with reliable plastic sheet materials and customised components.";
         const WHY_CHOOSE = ["Drawing/sample-based supply", "Custom cutting and drilling", "Industrial material knowledge", "Batch-wise supply", "Practical support for manufacturing requirements", "Reliable enquiry and quotation process"];
-        const ADMIN_AUTH_KEY = "kd_calc_auth";
         const ADMIN_TOOLS = [
+            { key: "AdminDashboard", label: "Admin Dashboard", title: "Admin Dashboard", icon: "shield-check" },
             { key: "Calculator", label: "Internal Calculator", title: "KD Internal Pricing Calculator", icon: "calculator" },
             { key: "Payslip", label: "Payslip Template", title: "Editable Payslip Template", icon: "receipt-text" },
             { key: "PDIR", label: "Generate PDIR", title: "PDIR Generator", icon: "clipboard-check" },
-            { key: "RMTC", label: "Generate RMTC", title: "Raw Material Test Certificate", icon: "file-check-2" }
+            { key: "RMTC", label: "Generate RMTC", title: "Raw Material Test Certificate", icon: "file-check-2" },
+            { key: "DXF", label: "PDF to DXF", title: "PDF to DXF Converter", icon: "file-up" }
         ];
 
         const ICONS = {
@@ -225,13 +229,14 @@ import {
         };
 
         let adminLibrariesPromise;
+        const ensurePdfLibrary = () => loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", () => Boolean(window.pdfjsLib));
         const ensureAdminLibraries = () => {
             if (!adminLibrariesPromise) {
                 adminLibrariesPromise = Promise.all([
                     loadExternalScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", () => Boolean(window.jspdf)),
                     loadExternalScript("https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js", () => Boolean(window.Papa)),
                     loadExternalScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js", () => Boolean(window.XLSX)),
-                    loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", () => Boolean(window.pdfjsLib)),
+                    ensurePdfLibrary(),
                     loadExternalScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", () => Boolean(window.JSZip))
                 ]).catch(error => {
                     adminLibrariesPromise = undefined;
@@ -253,7 +258,7 @@ import {
         const SectionTitle = ({ eyebrow, title, subtitle, align = "center", tone = "dark" }) => (
             <div className={`${align === "left" ? "text-left mx-0" : "text-center mx-auto"} mb-12 max-w-3xl px-4`}>
                 {eyebrow && <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-amber-600 mb-3">{eyebrow}</p>}
-                <h2 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${tone === "light" ? "text-white" : "text-slate-950"}`}>{title}</h2>
+                <h2 className={`site-display text-3xl md:text-4xl font-bold tracking-tight ${tone === "light" ? "text-white" : "text-slate-950"}`}>{title}</h2>
                 {subtitle && <p className={`${tone === "light" ? "text-slate-300" : "text-slate-600"} text-lg mt-4 leading-relaxed`}>{subtitle}</p>}
             </div>
         );
@@ -406,7 +411,7 @@ import {
                 setMobileMenuOpen(false);
             };
             return (
-                <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur no-print">
+                <nav className="site-nav fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur no-print">
                     <div className="hidden border-b border-slate-200 bg-slate-950 text-slate-200 md:block">
                         <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-6 text-[11px] font-bold tracking-wide">
                             <span>Industrial plastic sheets, cut parts and drawing-based fabrication</span>
@@ -415,10 +420,10 @@ import {
                     </div>
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="flex h-[72px] items-center justify-between">
-                            <button className="flex items-center text-left" onClick={() => chooseTab("Home")}>
+                            <button className="flex items-center text-left" onClick={() => chooseTab("Home")} aria-label="KD Enterprises home">
                                 <KDLogo className="mr-4 h-14 w-14" />
                                 <div>
-                                    <h1 className="text-lg font-extrabold leading-none text-slate-950 md:text-xl">KD Enterprises</h1>
+                                    <h1 className="site-display text-lg font-bold leading-none text-slate-950 md:text-xl">KD Enterprises</h1>
                                     <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-500">Industrial Materials</p>
                                 </div>
                             </button>
@@ -432,7 +437,7 @@ import {
                                         {ADMIN_TOOLS.map(tool => <button key={tool.key} type="button" onClick={() => chooseTab(tool.key)} className={`flex w-full items-center gap-3 px-3 py-3 text-left ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><Icon name={tool.icon} className="h-4 w-4" /><span className="text-sm font-extrabold">{tool.label}</span></button>)}
                                     </div>}
                                 </div>
-                                <button type="button" onClick={() => chooseTab("Contact")} className="inline-flex items-center gap-2 bg-blue-700 px-4 py-2.5 text-sm font-extrabold text-white hover:bg-blue-600"><Icon name="file-up" className="h-4 w-4" /> Send Drawing</button>
+                                <button type="button" onClick={() => chooseTab("Contact")} className="site-nav-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm font-extrabold text-white"><Icon name="file-up" className="h-4 w-4" /> Send Drawing</button>
                             </div>
                             <button type="button" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-700 lg:hidden" aria-label="Toggle navigation"><Icon name={isMobileMenuOpen ? "x" : "menu"} className="h-6 w-6" /></button>
                         </div>
@@ -467,16 +472,16 @@ import {
                 ].filter(Boolean).join("\n");
                 onContinue(request);
             };
-            return <section className="border-y border-slate-200 bg-white py-16">
+            return <section className="brief-section border-y border-slate-200 py-20">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
                         <div>
                             <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-600">Requirement builder</p>
-                            <h2 className="mt-3 text-3xl font-extrabold text-slate-950 md:text-4xl">Turn a part requirement into a clear enquiry.</h2>
+                            <h2 className="site-display mt-3 text-3xl font-bold text-slate-950 md:text-5xl">Turn a part requirement into a clear enquiry.</h2>
                             <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600">Capture the material, part form, key size and processing work before speaking with KD. Your completed brief flows directly into the quotation form.</p>
                             <div className="mt-8 space-y-4 border-l-2 border-blue-700 pl-5 text-sm text-slate-600"><p><strong className="text-slate-950">1. Define the material</strong><br />Choose a starting material or use the material guide.</p><p><strong className="text-slate-950">2. Capture the part</strong><br />Add thickness, size, quantity and required operations.</p><p><strong className="text-slate-950">3. Attach the drawing</strong><br />Share a PDF, image or sample reference with your enquiry.</p></div>
                         </div>
-                        <form onSubmit={(event) => { event.preventDefault(); continueToQuote(); }} className="border border-slate-200 bg-slate-50 p-5 md:p-7">
+                        <form onSubmit={(event) => { event.preventDefault(); continueToQuote(); }} className="brief-form border border-slate-200 bg-white p-5 md:p-7">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <label className="block"><span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Material</span><select value={material} onChange={(event) => setMaterial(event.target.value)} className="mt-2 w-full border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-blue-600">{Object.keys(MATERIAL_SIZES).map(item => <option key={item}>{item}</option>)}</select></label>
                                 <label className="block"><span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Requirement</span><select value={partType} onChange={(event) => setPartType(event.target.value)} className="mt-2 w-full border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-blue-600"><option>Raw sheet</option><option>Cut component</option><option>Drilled / slotted component</option><option>Drawing-based fabricated part</option></select></label>
@@ -494,22 +499,30 @@ import {
         const HomePage = ({ setTab, setQuoteMessage }) => {
             const startBrief = (message) => { setQuoteMessage(message); setTab("Contact"); };
             return <div>
-                <section className="hero-bg relative flex min-h-[720px] items-end overflow-hidden pt-36">
-                    <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
-                        <div className="max-w-3xl">
-                            <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-300">Faridabad, Haryana | Industrial material supply</p>
-                            <h2 className="mt-5 text-4xl font-extrabold leading-[1.08] text-white md:text-6xl">The right industrial plastic material, prepared for your production line.</h2>
-                            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-200">Bakelite, FRP, Glass Epoxy, Acrylic, Nylon and Delrin sheets supplied raw or processed to your drawing, sample and dimensional requirements.</p>
-                            <div className="mt-9 flex flex-col gap-3 sm:flex-row"><PrimaryButton onClick={() => setTab("Products")} variant="light">Explore materials</PrimaryButton><button type="button" onClick={() => setTab("Contact")} className="inline-flex items-center justify-center gap-2 border border-white/40 px-5 py-3 text-sm font-extrabold text-white hover:bg-white/10"><Icon name="file-up" className="h-4 w-4" /> Send drawing for quote</button></div>
+                <section className="hero-bg relative overflow-hidden pt-36">
+                    <div className="hero-orbit" aria-hidden="true" />
+                    <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+                        <div className="grid items-center gap-10 lg:min-h-[600px] lg:grid-cols-[1.12fr_0.88fr] lg:gap-16">
+                            <div className="max-w-3xl">
+                                <p className="hero-eyebrow inline-flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.22em] text-amber-300"><span className="h-px w-8 bg-amber-300" />Faridabad, Haryana · Industrial material supply</p>
+                                <h2 className="site-display mt-7 max-w-3xl text-5xl font-bold leading-[1.04] tracking-[-0.045em] text-white sm:text-6xl xl:text-7xl">Industrial materials.<br /><span className="text-amber-300">Ready for the work ahead.</span></h2>
+                                <p className="mt-7 max-w-2xl text-base leading-relaxed text-slate-200 sm:text-lg">Bakelite, FRP, Glass Epoxy, Acrylic, Nylon and Delrin—supplied as sheet stock or prepared to your drawing, sample and dimensional requirements.</p>
+                                <div className="mt-9 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={() => setTab("Products")} className="hero-primary inline-flex items-center justify-center gap-3 px-6 py-3.5 text-sm font-extrabold">Explore materials <Icon name="arrow-right" className="h-4 w-4" /></button><button type="button" onClick={() => setTab("Contact")} className="hero-secondary inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-extrabold text-white"><Icon name="file-up" className="h-4 w-4" /> Send a drawing</button></div>
+                            </div>
+                            <div className="hero-material-panel relative hidden lg:block">
+                                <div className="hero-material-image"><img src="products/glass epoxy (1).png" alt="Glass epoxy industrial sheet material" className="h-full w-full object-cover" /></div>
+                                <div className="hero-material-caption"><span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-amber-300">Material focus / 01</span><h3 className="site-display mt-2 text-2xl font-bold text-white">Glass Epoxy Sheets</h3><p className="mt-1 text-sm text-slate-200">Insulation stock for electrical and precision components.</p></div>
+                                <div className="hero-material-index" aria-hidden="true">01 / 06</div>
+                            </div>
                         </div>
-                        <div className="mt-14 grid border-t border-white/25 sm:grid-cols-3">
-                            {[['Drawing-led supply', 'Send a PDF, photo or sample reference'], ['Made for production', 'Cutting, drilling, slots and finishing'], ['Business-ready documents', 'PDIR and test certificate tools']].map(([title, detail]) => <div key={title} className="border-b border-white/20 py-5 pr-6 sm:border-b-0 sm:border-r sm:px-6 first:pl-0 last:border-r-0"><p className="font-extrabold text-white">{title}</p><p className="mt-1 text-sm text-slate-300">{detail}</p></div>)}
+                        <div className="hero-feature-strip mt-12 grid sm:grid-cols-3 lg:mt-0">
+                            {[['01', 'Drawing-led supply', 'Send a PDF, photo or sample reference'], ['02', 'Prepared for production', 'Cutting, drilling, slots and finishing'], ['03', 'Documented workflow', 'Inspection and material records']].map(([number, title, detail]) => <div key={title} className="hero-feature flex gap-4 px-5 py-5 first:pl-0"><span className="site-display text-xl font-bold text-amber-300">{number}</span><div><p className="font-extrabold text-white">{title}</p><p className="mt-1 text-xs leading-relaxed text-slate-300">{detail}</p></div></div>)}
                         </div>
                     </div>
                 </section>
                 <section className="bg-slate-950 py-5 text-white"><div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8"><p className="text-sm font-bold text-slate-200">Need a material recommendation before you specify a grade?</p><button type="button" onClick={() => setTab("Material Guide")} className="inline-flex items-center gap-2 self-start text-sm font-extrabold text-amber-300 hover:text-amber-200 md:self-auto">Open material guide <Icon name="arrow-right" className="h-4 w-4" /></button></div></section>
                 <ProjectBrief onContinue={startBrief} />
-                <section className="bg-slate-100 py-20"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end"><SectionTitle align="left" eyebrow="Material range" title="Industrial sheet materials for practical applications" subtitle="Source the base material and, where required, have it cut and prepared for assembly." /><button type="button" onClick={() => setTab("Products")} className="inline-flex items-center gap-2 self-start border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-800 hover:border-blue-400 md:mb-12">Full product catalogue <Icon name="arrow-right" className="h-4 w-4" /></button></div><div className="grid gap-5 md:grid-cols-3">{PRODUCTS.slice(3, 6).map(product => <article key={product.id} className="group overflow-hidden border border-slate-200 bg-white"><img src={product.img} alt={product.title} className="h-48 w-full object-cover transition duration-300 group-hover:scale-[1.02]" loading="lazy" /><div className="p-6"><Tag tone="blue">{product.category}</Tag><h3 className="mt-4 text-xl font-extrabold text-slate-950">{product.title}</h3><p className="mt-3 text-sm leading-relaxed text-slate-600">{product.desc}</p></div></article>)}</div></div></section>
+                <section className="materials-section py-20"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end"><SectionTitle align="left" eyebrow="Material range" title="The right stock for the right application." subtitle="Source the base material and, where required, have it cut and prepared for assembly." /><button type="button" onClick={() => setTab("Products")} className="inline-flex items-center gap-2 self-start border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-800 hover:border-blue-400 md:mb-12">Explore all materials <Icon name="arrow-right" className="h-4 w-4" /></button></div><div className="grid gap-5 md:grid-cols-3">{PRODUCTS.slice(3, 6).map((product, index) => <article key={product.id} className="material-card group overflow-hidden border border-slate-200 bg-white"><div className="relative overflow-hidden"><img src={product.img} alt={product.title} className="h-56 w-full object-cover transition duration-500 group-hover:scale-[1.055]" loading="lazy" /><span className="material-card-number site-display absolute left-4 top-4 px-3 py-1 text-sm font-bold">0{index + 1}</span></div><div className="p-6"><Tag tone="blue">{product.category}</Tag><h3 className="site-display mt-4 text-2xl font-bold text-slate-950">{product.title}</h3><p className="mt-3 text-sm leading-relaxed text-slate-600">{product.desc}</p><button type="button" onClick={() => setTab("Products")} className="mt-6 flex w-full items-center gap-2 border-t border-slate-200 pt-4 text-xs font-extrabold uppercase tracking-wider text-blue-700">Material details <Icon name="arrow-right" className="h-4 w-4" /></button></div></article>)}</div></div></section>
                 <section className="border-y border-slate-800 bg-slate-900 py-20 text-white"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionTitle tone="light" eyebrow="How KD supports production" title="From requirement to dispatch, with the details carried through." subtitle="Bring a specification, drawing or sample. KD helps turn it into a material and processing requirement that can be reviewed before dispatch." /><div className="grid gap-8 md:grid-cols-4">{[['01', 'Review', 'Material, dimensions, quantity and application'], ['02', 'Prepare', 'Cutting, drilling and component processing'], ['03', 'Verify', 'Inspection records and material certificates'], ['04', 'Dispatch', 'Batch-wise packing and dispatch coordination']].map(([number, title, copy]) => <div key={number} className="border-t border-slate-600 pt-5"><span className="text-sm font-extrabold text-amber-300">{number}</span><h3 className="mt-4 text-xl font-extrabold">{title}</h3><p className="mt-3 text-sm leading-relaxed text-slate-300">{copy}</p></div>)}</div></div></section>
                 <section className="bg-white py-20"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionTitle eyebrow="Applications" title="Built around industrial use cases" subtitle={INDUSTRY_COPY} /><div className="grid gap-px border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">{INDUSTRIES_SERVED.map((item, index) => <div key={item} className="bg-white p-5"><Icon name={["bolt", "sun", "train-front", "battery-charging", "car-front", "factory", "panels-top-left", "settings-2"][index]} className="h-5 w-5 text-blue-700" /><p className="mt-5 font-extrabold text-slate-950">{item}</p></div>)}</div></div></section>
             </div>;
@@ -569,8 +582,8 @@ import {
 
             return (
                 <div className="min-h-screen bg-slate-50 pb-24">
-                    <div className="border-b border-slate-200 bg-white pb-12 pt-32">
-                        <SectionTitle eyebrow="Product catalogue" title="Industrial materials and processed components" subtitle="Search by material, application or industry, then send a focused quotation request from the product detail." />
+                    <div className="catalogue-hero border-b border-slate-200 pb-12 pt-32">
+                        <SectionTitle eyebrow="Product catalogue" title="Materials for demanding work." subtitle="Explore industrial sheets and processed components by material, application or industry—then send a focused quotation request." />
                     </div>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="relative z-20 mb-8 grid gap-4 border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_220px] md:p-5">
@@ -588,7 +601,7 @@ import {
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
                             {filtered.map(product => (
-                                <div key={product.id} className="bg-white rounded-xl overflow-hidden border border-slate-200 card-rise flex flex-col">
+                                <div key={product.id} className="bg-white rounded-md overflow-hidden border border-slate-200 card-rise flex flex-col">
                                     <div className="relative">
                                         <img src={product.img} alt={product.title} className="h-56 w-full object-cover" />
                                         <div className="absolute top-4 left-4"><Tag tone="blue">{product.category}</Tag></div>
@@ -597,7 +610,7 @@ import {
                                         <div className="flex items-start gap-3">
                                             <div className="bg-slate-100 p-2 rounded-md text-blue-700"><Icon name={product.icon} className="w-5 h-5" /></div>
                                             <div>
-                                                <h3 className="text-xl font-extrabold text-slate-950">{product.title}</h3>
+                                                <h3 className="site-display text-xl font-bold text-slate-950">{product.title}</h3>
                                                 <p className="text-sm text-slate-500 font-semibold">{product.material}</p>
                                             </div>
                                         </div>
@@ -687,70 +700,70 @@ import {
             return `Rupees ${words.join(" ")} Only`;
         };
 
-        const hashInput = async (value) => {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(value);
-            const buffer = await crypto.subtle.digest("SHA-256", data);
-            return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, "0")).join("");
-        };
-
-        const verifyInternalEntry = async (value) => {
-            const digestParts = [
-                "c4589a15fb278bc8",
-                "8f8c69ca5c8264a9",
-                "5fa50b996ed14605",
-                "80daa0c8437bbb4a"
-            ];
-            return await hashInput(value) === digestParts.join("");
-        };
-
-        const AdminGate = ({ toolTitle, toolSubtitle, children }) => {
+        const AdminGate = ({ toolTitle, toolSubtitle, libraryMode = "all", children }) => {
             useLucide();
-            const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === "true");
+            const [adminUser, setAdminUser] = useState(null);
             const [password, setPassword] = useState("");
+            const [email, setEmail] = useState("");
             const [error, setError] = useState("");
             const [isChecking, setIsChecking] = useState(false);
+            const [isAuthorizing, setIsAuthorizing] = useState(true);
             const [isToolkitReady, setToolkitReady] = useState(false);
             const [toolkitError, setToolkitError] = useState("");
-            const passwordRef = useRef(null);
 
             useEffect(() => {
-                if (!isAuthenticated) return;
                 let active = true;
-                ensureAdminLibraries()
+                getAuthorizedAdmin()
+                    .then(user => { if (active) setAdminUser(user); })
+                    .catch(() => { if (active) setError("Could not verify admin access. Please try signing in again."); })
+                    .finally(() => { if (active) setIsAuthorizing(false); });
+                const subscription = adminBackend?.auth.onAuthStateChange((event) => {
+                    if (event === "SIGNED_OUT" && active) { setAdminUser(null); setToolkitReady(false); }
+                });
+                return () => { active = false; subscription?.data.subscription.unsubscribe(); };
+            }, []);
+
+            useEffect(() => {
+                if (!adminUser) return;
+                let active = true;
+                const prepare = libraryMode === "none" ? Promise.resolve() : libraryMode === "pdf" ? ensurePdfLibrary() : ensureAdminLibraries();
+                prepare
                     .then(() => active && setToolkitReady(true))
                     .catch((loadError) => active && setToolkitError(loadError.message || "The reporting tools could not be loaded."));
                 return () => { active = false; };
-            }, [isAuthenticated]);
+            }, [adminUser, libraryMode]);
 
             const handleLogin = async (e) => {
                 e.preventDefault();
-                if (isChecking) return;
-                const enteredPassword = ((passwordRef.current && passwordRef.current.value) || password).trim();
+                if (isChecking || !adminBackend) return;
                 setIsChecking(true);
-                const isValid = await verifyInternalEntry(enteredPassword);
-                if (isValid) {
-                    sessionStorage.setItem(ADMIN_AUTH_KEY, "true");
-                    setIsAuthenticated(true);
-                    setError("");
-                } else {
-                    setError("Incorrect password");
-                    setTimeout(() => setIsChecking(false), 1400);
-                    return;
-                }
-                setIsChecking(false);
+                setError("");
+                try {
+                    const loginId = email.trim();
+                    const accountEmail = loginId.toLowerCase() === ADMIN_LOGIN_USERNAME ? ADMIN_LOGIN_EMAIL : loginId;
+                    if (!accountEmail.includes("@")) throw new Error("This admin username is not linked to an account email yet.");
+                    const { error: loginError } = await adminBackend.auth.signInWithPassword({ email: accountEmail, password });
+                    if (loginError) setError(loginError.message || "Could not sign in.");
+                    else {
+                        const user = await getAuthorizedAdmin();
+                        if (user) { setAdminUser(user); setPassword(""); }
+                        else { await adminBackend.auth.signOut(); setError("This account has not been granted admin access."); }
+                    }
+                } catch (loginFailure) {
+                    setError(loginFailure.message || "Could not verify admin access.");
+                } finally { setIsChecking(false); }
             };
 
-            if (isAuthenticated && isToolkitReady) return children;
+            if (adminUser && isToolkitReady) return <>{children}</>;
 
-            if (isAuthenticated) {
+            if (adminUser || isAuthorizing) {
                 return (
                     <div className="pt-32 pb-24 min-h-screen bg-slate-100 flex items-center justify-center px-4">
                         <div className="bg-white p-8 rounded-xl shadow-xl max-w-md w-full border border-slate-200 text-center">
                             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-md bg-blue-50 text-blue-700"><Icon name={toolkitError ? "triangle-alert" : "loader-circle"} className={`h-7 w-7 ${toolkitError ? "" : "animate-spin"}`} /></div>
-                            <h2 className="text-xl font-extrabold text-slate-950">{toolkitError ? "Unable to open this tool" : "Preparing internal tools"}</h2>
+                            <h2 className="text-xl font-extrabold text-slate-950">{toolkitError ? "Unable to open this tool" : isAuthorizing ? "Checking admin access" : "Preparing internal tools"}</h2>
                             <p className="mt-2 text-sm text-slate-500">{toolkitError || "Loading the reporting features needed for this workspace."}</p>
-                            {toolkitError && <button type="button" onClick={() => { setToolkitError(""); ensureAdminLibraries().then(() => setToolkitReady(true)).catch(error => setToolkitError(error.message)); }} className="mt-5 rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white">Try again</button>}
+                            {toolkitError && <button type="button" onClick={() => { setToolkitError(""); (libraryMode === "none" ? Promise.resolve() : libraryMode === "pdf" ? ensurePdfLibrary() : ensureAdminLibraries()).then(() => setToolkitReady(true)).catch(error => setToolkitError(error.message)); }} className="mt-5 rounded-md bg-slate-900 px-4 py-3 text-sm font-extrabold text-white">Try again</button>}
                         </div>
                     </div>
                 );
@@ -763,17 +776,13 @@ import {
                         <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-600 mb-2">Admin Access Only</p>
                         <h2 className="text-2xl font-extrabold text-slate-950">{toolTitle}</h2>
                         {toolSubtitle && <p className="text-slate-500 mt-2">{toolSubtitle}</p>}
-                        {/*
-                          NOTE:
-                          This is not secure authentication.
-                          This is only to hide internal tools from general users.
-                          For real security, backend authentication is required.
-                        */}
+                        {!adminBackend && <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">Supabase publishable key has not been configured yet. Add it to the site configuration to enable admin sign-in.</p>}
                         <form onSubmit={handleLogin} className="space-y-4 mt-6">
-                            <input ref={passwordRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
+                            <input type="text" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Username or admin email" aria-label="Username or admin email" />
+                            <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
                             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
-                            <button type="submit" disabled={isChecking} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
-                                {isChecking ? "Checking..." : "Unlock Admin Tool"} <Icon name="lock-open" className="w-4 h-4" />
+                            <button type="submit" disabled={isChecking || !adminBackend} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
+                                {isChecking ? "Checking..." : "Sign in"} <Icon name="lock-open" className="w-4 h-4" />
                             </button>
                         </form>
                     </div>
@@ -3767,6 +3776,21 @@ import {
             </div>
         );
 
+        const AdminDashboard = ({ setTab }) => (
+            <div className="min-h-screen bg-slate-100 pb-24 pt-32">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="admin-dashboard-hero flex flex-wrap items-start justify-between gap-4 p-7 sm:p-10">
+                        <div><p className="text-xs font-extrabold uppercase tracking-[.2em] text-amber-300">KD internal workspace / admin</p><h2 className="site-display mt-3 text-4xl font-bold text-white sm:text-5xl">Workroom</h2><p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-200">One place for estimates, inspection records, certificates, product references and drawing preparation.</p></div>
+                        <button type="button" onClick={() => adminBackend?.auth.signOut()} className="rounded-sm border border-white/40 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">Sign out</button>
+                    </div>
+                    <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {ADMIN_TOOLS.filter(tool => tool.key !== "AdminDashboard").map((tool, index) => <button key={tool.key} type="button" onClick={() => setTab(tool.key)} className="admin-tool-card rounded-lg border border-slate-200 bg-white p-6 text-left"><div className="mb-6 flex items-start justify-between"><span className="inline-flex rounded-sm bg-blue-50 p-3 text-blue-700"><Icon name={tool.icon} className="h-5 w-5" /></span><span className="site-display text-sm font-bold text-slate-400">0{index + 1}</span></div><h3 className="site-display text-xl font-bold text-slate-950">{tool.label}</h3><p className="mt-2 text-sm text-slate-500">Open {tool.title.toLowerCase()}</p></button>)}
+                        <a href="assets/kd-product-catalogue.pdf" target="_blank" rel="noopener noreferrer" className="admin-tool-card rounded-lg border border-slate-200 bg-white p-6"><div className="mb-6 flex items-start justify-between"><span className="inline-flex rounded-sm bg-blue-50 p-3 text-blue-700"><Icon name="file-text" className="h-5 w-5" /></span><span className="site-display text-sm font-bold text-slate-400">06</span></div><h3 className="site-display text-xl font-bold text-slate-950">Product Catalogue PDF</h3><p className="mt-2 text-sm text-slate-500">Current products, listed sizes and applications</p></a>
+                    </div>
+                </div>
+            </div>
+        );
+
         const App = () => {
             const [activeTab, setTab] = useState("Home");
             const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -3791,10 +3815,12 @@ import {
                         {activeTab === "Services" && <ServicesPage startQuote={(message) => { setQuoteMessage(message); setTab("Contact"); }} setTab={setTab} />}
                         {activeTab === "About" && <AboutUs />}
                         {activeTab === "Team" && <TeamSection />}
+                        {activeTab === "AdminDashboard" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="none"><AdminDashboard setTab={setTab} /></AdminGate>}
                         {activeTab === "Calculator" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity."><CalculatorSection /></AdminGate>}
                         {activeTab === "Payslip" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Create and print an editable employee payslip template for internal payroll records."><PayslipSection /></AdminGate>}
                         {activeTab === "PDIR" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Generate a pre-dispatch inspection report for internal quality and dispatch records."><PDIRSection /></AdminGate>}
                         {activeTab === "RMTC" && <AdminGate toolTitle={activeAdminTool.title}><RMTCSection /></AdminGate>}
+                        {activeTab === "DXF" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="pdf"><DxfTool /></AdminGate>}
                         {activeTab === "Contact" && <ContactSection quoteMessage={quoteMessage} setQuoteMessage={setQuoteMessage} />}
                     </main>
                     <Footer setTab={setTab} />
