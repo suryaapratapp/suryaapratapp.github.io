@@ -400,11 +400,12 @@ import {
             return <span className="text-lg font-extrabold leading-none">X</span>;
         };
 
-        const Navigation = ({ activeTab, setTab, isMobileMenuOpen, setMobileMenuOpen }) => {
+        const Navigation = ({ activeTab, setTab, isMobileMenuOpen, setMobileMenuOpen, adminUser, isAuthReady }) => {
             const [isAdminOpen, setAdminOpen] = useState(false);
             const navItems = ["Products", "Material Guide", "Services", "About", "Contact"];
             const adminKeys = ADMIN_TOOLS.map(tool => tool.key);
             const isAdminActive = adminKeys.includes(activeTab);
+            useEffect(() => { if (!adminUser) setAdminOpen(false); }, [adminUser]);
             const chooseTab = (item) => {
                 setTab(item);
                 setAdminOpen(false);
@@ -431,22 +432,26 @@ import {
                                 {navItems.map(item => (
                                     <button key={item} onClick={() => chooseTab(item)} className={`text-sm font-extrabold transition ${activeTab === item ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>{item}</button>
                                 ))}
-                                <div className="relative">
-                                    <button type="button" onClick={() => setAdminOpen(prev => !prev)} className={`inline-flex items-center gap-1.5 text-sm font-extrabold transition ${isAdminActive ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>Admin <Icon name="chevron-down" className="h-4 w-4" /></button>
+                                {adminUser ? <div className="relative">
+                                    <button type="button" onClick={() => setAdminOpen(prev => !prev)} aria-expanded={isAdminOpen} aria-haspopup="true" className={`inline-flex items-center gap-1.5 text-sm font-extrabold transition ${isAdminActive ? "text-blue-700" : "text-slate-600 hover:text-slate-950"}`}>Admin <Icon name="chevron-down" className="h-4 w-4" /></button>
                                     {isAdminOpen && <div className="absolute right-0 top-full mt-4 w-64 border border-slate-200 bg-white p-2 shadow-xl">
                                         {ADMIN_TOOLS.map(tool => <button key={tool.key} type="button" onClick={() => chooseTab(tool.key)} className={`flex w-full items-center gap-3 px-3 py-3 text-left ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}><Icon name={tool.icon} className="h-4 w-4" /><span className="text-sm font-extrabold">{tool.label}</span></button>)}
+                                        <a href="/assets/kd-product-catalogue.pdf" target="_blank" rel="noopener noreferrer" onClick={() => setAdminOpen(false)} className="flex w-full items-center gap-3 px-3 py-3 text-left text-sm font-extrabold text-slate-700 hover:bg-slate-50"><Icon name="file-text" className="h-4 w-4" />Product Catalogue PDF</a>
                                     </div>}
-                                </div>
+                                </div> : isAuthReady && <button type="button" onClick={() => chooseTab("AdminDashboard")} className="inline-flex items-center gap-2 border border-blue-700 px-4 py-2.5 text-sm font-extrabold text-blue-700 transition hover:bg-blue-50"><Icon name="lock-open" className="h-4 w-4" /> Login</button>}
                                 <button type="button" onClick={() => chooseTab("Contact")} className="site-nav-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm font-extrabold text-white"><Icon name="file-up" className="h-4 w-4" /> Send Drawing</button>
                             </div>
-                            <button type="button" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-700 lg:hidden" aria-label="Toggle navigation"><Icon name={isMobileMenuOpen ? "x" : "menu"} className="h-6 w-6" /></button>
+                            <div className="flex items-center gap-2 lg:hidden">
+                                {isAuthReady && <button type="button" onClick={() => chooseTab("AdminDashboard")} className="inline-flex items-center gap-1.5 border border-blue-700 px-3 py-2 text-xs font-extrabold text-blue-700">{adminUser ? "Dashboard" : "Login"}</button>}
+                                <button type="button" onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-700" aria-label="Toggle navigation" aria-expanded={isMobileMenuOpen}><Icon name={isMobileMenuOpen ? "x" : "menu"} className="h-6 w-6" /></button>
+                            </div>
                         </div>
                     </div>
                     {isMobileMenuOpen && <div className="border-t border-slate-200 bg-white shadow-xl lg:hidden">
                         <div className="space-y-1 px-4 py-4">
                             {navItems.map(item => <button key={item} onClick={() => chooseTab(item)} className={`block w-full px-4 py-3 text-left text-sm font-extrabold ${activeTab === item ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>{item}</button>)}
                             <button type="button" onClick={() => chooseTab("Contact")} className="mt-2 flex w-full items-center justify-center gap-2 bg-blue-700 px-4 py-3 text-sm font-extrabold text-white"><Icon name="file-up" className="h-4 w-4" /> Send Drawing / Request Quote</button>
-                            <div className="mt-3 border-t border-slate-100 pt-3"><p className="px-4 pb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Admin tools</p>{ADMIN_TOOLS.map(tool => <button key={tool.key} onClick={() => chooseTab(tool.key)} className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-extrabold ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}><Icon name={tool.icon} className="h-4 w-4" />{tool.label}</button>)}</div>
+                            {adminUser && <div className="mt-3 border-t border-slate-100 pt-3"><p className="px-4 pb-2 text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Admin workspace</p>{ADMIN_TOOLS.map(tool => <button key={tool.key} onClick={() => chooseTab(tool.key)} className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-extrabold ${activeTab === tool.key ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}><Icon name={tool.icon} className="h-4 w-4" />{tool.label}</button>)}<a href="/assets/kd-product-catalogue.pdf" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-extrabold text-slate-700"><Icon name="file-text" className="h-4 w-4" />Product Catalogue PDF</a></div>}
                         </div>
                     </div>}
                 </nav>
@@ -701,7 +706,7 @@ import {
             return `Rupees ${words.join(" ")} Only`;
         };
 
-        const AdminGate = ({ toolTitle, toolSubtitle, libraryMode = "all", children }) => {
+        const AdminGate = ({ toolTitle, toolSubtitle, libraryMode = "all", onAdminLogin, children }) => {
             useLucide();
             const [adminUser, setAdminUser] = useState(null);
             const [password, setPassword] = useState("");
@@ -747,7 +752,7 @@ import {
                     if (loginError) setError(loginError.message || "Could not sign in.");
                     else {
                         const user = await getAuthorizedAdmin();
-                        if (user) { setAdminUser(user); setPassword(""); }
+                        if (user) { setAdminUser(user); onAdminLogin?.(user); setPassword(""); }
                         else { await adminBackend.auth.signOut(); setError("This account has not been granted admin access."); }
                     }
                 } catch (loginFailure) {
@@ -3802,7 +3807,29 @@ import {
             const [activeTab, setTab] = useState("Home");
             const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
             const [quoteMessage, setQuoteMessage] = useState("");
+            const [adminUser, setAdminUser] = useState(null);
+            const [isAuthReady, setAuthReady] = useState(false);
             useLucide();
+
+            useEffect(() => {
+                let active = true;
+                getAuthorizedAdmin()
+                    .then(user => { if (active) setAdminUser(user); })
+                    .catch(() => { if (active) setAdminUser(null); })
+                    .finally(() => { if (active) setAuthReady(true); });
+                const subscription = adminBackend?.auth.onAuthStateChange(event => {
+                    if (event === "SIGNED_OUT" && active) {
+                        setAdminUser(null);
+                        setAuthReady(true);
+                    }
+                    if (event === "SIGNED_IN") {
+                        setTimeout(() => {
+                            getAuthorizedAdmin().then(user => { if (active) setAdminUser(user); }).catch(() => { if (active) setAdminUser(null); });
+                        }, 0);
+                    }
+                });
+                return () => { active = false; subscription?.data.subscription.unsubscribe(); };
+            }, []);
 
             useEffect(() => {
                 if (activeTab === "Home" && window.location.hash === "#materials") {
@@ -3820,7 +3847,7 @@ import {
 
             return (
                 <div className="min-h-screen flex flex-col">
-                    <Navigation activeTab={activeTab} setTab={setTab} isMobileMenuOpen={isMobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+                    <Navigation activeTab={activeTab} setTab={setTab} isMobileMenuOpen={isMobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} adminUser={adminUser} isAuthReady={isAuthReady} />
                     <main className="flex-grow">
                         {activeTab === "Home" && <HomePage setTab={setTab} setQuoteMessage={setQuoteMessage} />}
                         {activeTab === "Products" && <ProductGrid onQuote={requestQuote} />}
@@ -3828,12 +3855,12 @@ import {
                         {activeTab === "Services" && <ServicesPage startQuote={(message) => { setQuoteMessage(message); setTab("Contact"); }} setTab={setTab} />}
                         {activeTab === "About" && <AboutUs />}
                         {activeTab === "Team" && <TeamSection />}
-                        {activeTab === "AdminDashboard" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="none"><AdminDashboard setTab={setTab} /></AdminGate>}
-                        {activeTab === "Calculator" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity."><CalculatorSection /></AdminGate>}
-                        {activeTab === "Payslip" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Create and print an editable employee payslip template for internal payroll records."><PayslipSection /></AdminGate>}
-                        {activeTab === "PDIR" && <AdminGate toolTitle={activeAdminTool.title} toolSubtitle="Generate a pre-dispatch inspection report for internal quality and dispatch records."><PDIRSection /></AdminGate>}
-                        {activeTab === "RMTC" && <AdminGate toolTitle={activeAdminTool.title}><RMTCSection /></AdminGate>}
-                        {activeTab === "DXF" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="pdf"><DxfTool /></AdminGate>}
+                        {activeTab === "AdminDashboard" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="none" onAdminLogin={setAdminUser}><AdminDashboard setTab={setTab} /></AdminGate>}
+                        {activeTab === "Calculator" && <AdminGate toolTitle={activeAdminTool.title} onAdminLogin={setAdminUser} toolSubtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity."><CalculatorSection /></AdminGate>}
+                        {activeTab === "Payslip" && <AdminGate toolTitle={activeAdminTool.title} onAdminLogin={setAdminUser} toolSubtitle="Create and print an editable employee payslip template for internal payroll records."><PayslipSection /></AdminGate>}
+                        {activeTab === "PDIR" && <AdminGate toolTitle={activeAdminTool.title} onAdminLogin={setAdminUser} toolSubtitle="Generate a pre-dispatch inspection report for internal quality and dispatch records."><PDIRSection /></AdminGate>}
+                        {activeTab === "RMTC" && <AdminGate toolTitle={activeAdminTool.title} onAdminLogin={setAdminUser}><RMTCSection /></AdminGate>}
+                        {activeTab === "DXF" && <AdminGate toolTitle={activeAdminTool.title} libraryMode="pdf" onAdminLogin={setAdminUser}><DxfTool /></AdminGate>}
                         {activeTab === "Contact" && <ContactSection quoteMessage={quoteMessage} setQuoteMessage={setQuoteMessage} />}
                     </main>
                     <Footer setTab={setTab} />
