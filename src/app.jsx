@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import DxfTool from "./dxf-tool.jsx";
 import { adminBackend, getAuthorizedAdmin } from "./admin-backend.js";
-import { ADMIN_LOGIN_EMAIL, ADMIN_LOGIN_USERNAME } from "./supabase-config.js";
 import {
     ArrowRight, BatteryCharging, Bolt, Box, Calculator, CarFront, Check, ChevronDown, Circle,
     ClipboardCheck, CloudSun, Component, Copy, Drill, Factory, FileCheck2, FileText, FileUp,
@@ -745,10 +744,7 @@ import {
                 setIsChecking(true);
                 setError("");
                 try {
-                    const loginId = email.trim();
-                    const accountEmail = loginId.toLowerCase() === ADMIN_LOGIN_USERNAME ? ADMIN_LOGIN_EMAIL : loginId;
-                    if (!accountEmail.includes("@")) throw new Error("This admin username is not linked to an account email yet.");
-                    const { error: loginError } = await adminBackend.auth.signInWithPassword({ email: accountEmail, password });
+                    const { error: loginError } = await adminBackend.auth.signInWithPassword({ email: email.trim(), password });
                     if (loginError) setError(loginError.message || "Could not sign in.");
                     else {
                         const user = await getAuthorizedAdmin();
@@ -784,7 +780,7 @@ import {
                         {toolSubtitle && <p className="text-slate-500 mt-2">{toolSubtitle}</p>}
                         {!adminBackend && <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">Supabase publishable key has not been configured yet. Add it to the site configuration to enable admin sign-in.</p>}
                         <form onSubmit={handleLogin} className="space-y-4 mt-6">
-                            <input type="text" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Username or admin email" aria-label="Username or admin email" />
+                            <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Admin email" aria-label="Admin email" />
                             <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md focus:border-blue-500 outline-none" placeholder="Password" />
                             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
                             <button type="submit" disabled={isChecking || !adminBackend} className="w-full bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-lg shadow-blue-900/15 px-5 py-3 rounded-md font-extrabold text-sm transition-all inline-flex items-center justify-center gap-2">
