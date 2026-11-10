@@ -6,8 +6,9 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles.css -o ./assets/site.css --minify",
     "build:js": "esbuild ./src/app.jsx --bundle --minify --target=es2020 --format=iife --outfile=./assets/app.js",
-    "build:public": "rm -rf public && mkdir public && cp index.html logo-kde.png public/ && cp -R assets products public/",
-    "build": "npm run build:css && npm run build:js && npm run build:public",
+    "build:seo": "node scripts/generate_seo_pages.mjs",
+    "build:public": "rm -rf public && mkdir public && cp index.html logo-kde.png robots.txt sitemap.xml public/ && cp -R assets products materials public/",
+    "build": "npm run build:css && npm run build:js && npm run build:seo && npm run build:public",
     "dev": "npx serve ."
   },
   "dependencies": {
