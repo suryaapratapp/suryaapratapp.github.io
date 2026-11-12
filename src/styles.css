@@ -59,6 +59,72 @@
         .admin-dashboard-hero::after { content: ""; position: absolute; width: 340px; height: 340px; right: -125px; bottom: -240px; border: 1px solid rgba(237,182,94,.34); border-radius: 50%; pointer-events: none; }
         .admin-tool-card { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; box-shadow: 0 8px 22px rgba(16,38,59,.055); }
         .admin-tool-card:hover { transform: translateY(-3px); border-color: #87a8d1; box-shadow: 0 16px 30px rgba(16,38,59,.11); }
+        .pricing-studio {
+            --pricing-ink: #102a25;
+            --pricing-green: #0d6b57;
+            --pricing-mint: #76e4c4;
+            background:
+                linear-gradient(rgba(15, 54, 48, .035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 54, 48, .035) 1px, transparent 1px),
+                #eef3f1;
+            background-size: 28px 28px;
+            color: var(--pricing-ink);
+        }
+        .pricing-hero {
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 82% -20%, rgba(118, 228, 196, .22), transparent 34%),
+                radial-gradient(circle at 10% 120%, rgba(65, 132, 255, .13), transparent 36%),
+                #0a211e;
+            border-bottom: 1px solid rgba(118, 228, 196, .2);
+        }
+        .pricing-hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: .13;
+            background-image: linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(90deg, transparent, #000 55%);
+        }
+        .pricing-hero > div { position: relative; z-index: 1; }
+        .pricing-hero-stat { display: flex; flex-direction: column; padding: 12px; border-left: 2px solid rgba(118,228,196,.5); background: rgba(255,255,255,.04); }
+        .pricing-hero-stat strong { color: #fff; font: 700 20px/1.1 'Space Grotesk', sans-serif; }
+        .pricing-hero-stat span { margin-top: 4px; color: #94a3b8; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .drawing-dropzone {
+            border: 1px dashed rgba(118, 228, 196, .48);
+            border-radius: 20px;
+            background: rgba(255,255,255,.055);
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: inset 0 1px rgba(255,255,255,.08), 0 26px 70px rgba(0,0,0,.18);
+            backdrop-filter: blur(8px);
+            transition: border-color .18s ease, background .18s ease, transform .18s ease;
+        }
+        .drawing-dropzone.is-active { border-color: #76e4c4; background: rgba(118,228,196,.14); transform: scale(1.01); }
+        .drawing-dropzone-icon { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 18px; color: #76e4c4; background: rgba(118,228,196,.12); border: 1px solid rgba(118,228,196,.18); }
+        .pricing-studio .rounded-xl { border-radius: 16px; }
+        .pricing-studio .shadow-sm { box-shadow: 0 12px 35px rgba(10, 42, 36, .07); }
+        .pricing-studio input:focus, .pricing-studio select:focus, .pricing-studio textarea:focus { border-color: #0d8068; box-shadow: 0 0 0 3px rgba(13,128,104,.1); }
+        .pricing-studio .bg-blue-700 { background-color: #0d6b57; }
+        .pricing-studio .hover\:bg-blue-600:hover { background-color: #0a5747; }
+        .pricing-studio .text-blue-700, .pricing-studio .text-blue-800 { color: #0d6b57; }
+        .pricing-studio .bg-blue-50 { background-color: #ecfdf7; }
+        .pricing-studio .border-blue-200 { border-color: #b8eadb; }
+        .pricing-workbench { border-top: 4px solid #0d6b57; }
+        .pricing-workbench table thead { position: sticky; top: 0; z-index: 2; }
+        .pricing-workbench table tbody tr:nth-child(even) { background: #f8fbfa; }
+        .pricing-workbench table tbody tr:hover { background: #effaf6; }
+        .pricing-button-primary, .pricing-button-secondary, .pricing-button-quiet { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 8px; padding: 10px 13px; font-size: 12px; font-weight: 800; transition: .16s ease; }
+        .pricing-button-primary { color: white; background: #0d6b57; border: 1px solid #0d6b57; }
+        .pricing-button-primary:hover { background: #095746; }
+        .pricing-button-secondary { color: #183d35; background: white; border: 1px solid #c8d7d2; }
+        .pricing-button-secondary:hover { border-color: #6cae9e; background: #f3faf7; }
+        .pricing-button-quiet { color: #64748b; background: transparent; border: 1px solid transparent; }
+        .pricing-button-quiet:hover { color: #b91c1c; background: #fff1f2; }
+        @media (max-width: 639px) { .pricing-hero-stat { padding: 9px; } .drawing-dropzone { padding: 26px 18px; } }
         @media (min-width: 640px) { .hero-feature { border-bottom: 0; border-right: 1px solid rgba(255,255,255,.18); } .hero-feature:last-child { border-right: 0; } }
         @media (max-width: 639px) { .hero-bg { background-position: 55% center; } .hero-orbit { right: -310px; top: 190px; } }
         .industrial-grid { background: #f8fafc; }

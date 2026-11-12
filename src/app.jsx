@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import DxfTool from "./dxf-tool.jsx";
+import { readOutlinedText } from "./dxf-ocr.js";
+import { calculateBestSheetFit, calculateDetectionConfidence, estimateProcessingCosts } from "./pricing-engine.js";
 import { adminBackend, getAuthorizedAdmin } from "./admin-backend.js";
 import {
-    ArrowRight, BatteryCharging, Bolt, Box, Calculator, CarFront, Check, ChevronDown, Circle,
-    ClipboardCheck, CloudSun, Component, Copy, Drill, Factory, FileCheck2, FileText, FileUp,
+    AlertCircle, ArrowRight, BatteryCharging, Bolt, Box, Calculator, CarFront, Check, CheckCircle2,
+    ChevronDown, Circle, ClipboardCheck, CloudSun, Component, Copy, Download, Drill, Factory,
+    FileCheck2, FileDown, FileSpreadsheet, FileText, FileUp,
     Grid, Layers, Linkedin, List, LoaderCircle, Lock, LockOpen, Mail, MapPin, Menu,
     MessageCircle, PanelTop, PanelsTopLeft, Palette, ReceiptText, RotateCw, Scissors, Search,
     Send, Settings, Settings2, Shield, ShieldCheck, Sparkles, Sun, TrainFront, TriangleAlert,
-    Wrench, X, Zap
+    UploadCloud, WandSparkles, Wrench, X, Zap
 } from "lucide-react";
 
         const CUSTOMISATION_LIST = [
@@ -191,15 +194,18 @@ import {
         const ICONS = {
             "arrow-right": ArrowRight, "battery-charging": BatteryCharging, bolt: Bolt, box: Box,
             calculator: Calculator, "car-front": CarFront, check: Check, "chevron-down": ChevronDown,
+            "alert-circle": AlertCircle, "check-circle": CheckCircle2,
             "clipboard-check": ClipboardCheck, "cloud-sun": CloudSun, component: Component, copy: Copy,
-            drill: Drill, factory: Factory, "file-check-2": FileCheck2, "file-text": FileText, "file-up": FileUp,
+            download: Download, drill: Drill, factory: Factory, "file-check-2": FileCheck2, "file-down": FileDown,
+            "file-spreadsheet": FileSpreadsheet, "file-text": FileText, "file-up": FileUp,
             grid: Grid, layers: Layers, linkedin: Linkedin, list: List, "loader-circle": LoaderCircle,
             lock: Lock, "lock-open": LockOpen, mail: Mail, "map-pin": MapPin, menu: Menu,
             "message-circle": MessageCircle, "panel-top": PanelTop, "panels-top-left": PanelsTopLeft,
             palette: Palette, "receipt-text": ReceiptText, "rotate-cw": RotateCw, scissors: Scissors,
             search: Search, send: Send, settings: Settings, "settings-2": Settings2, shield: Shield,
             "shield-check": ShieldCheck, sparkles: Sparkles, sun: Sun, "train-front": TrainFront,
-            "triangle-alert": TriangleAlert, wrench: Wrench, x: X, zap: Zap
+            "triangle-alert": TriangleAlert, "upload-cloud": UploadCloud, "wand-sparkles": WandSparkles,
+            wrench: Wrench, x: X, zap: Zap
         };
 
         const Icon = ({ name, className = "" }) => {
@@ -234,7 +240,7 @@ import {
                 adminLibrariesPromise = Promise.all([
                     loadExternalScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", () => Boolean(window.jspdf)),
                     loadExternalScript("https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js", () => Boolean(window.Papa)),
-                    loadExternalScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js", () => Boolean(window.XLSX)),
+                    loadExternalScript("https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js", () => Boolean(window.XLSX)),
                     ensurePdfLibrary(),
                     loadExternalScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", () => Boolean(window.JSZip))
                 ]).catch(error => {
@@ -834,6 +840,7 @@ import {
 
         const CalculatorSection = () => {
             const [isProcessingOpen, setProcessingOpen] = useState(false);
+            const [isDrawingDragActive, setDrawingDragActive] = useState(false);
             const [calculatedItems, setCalculatedItems] = useState([]);
             const [itemSearch, setItemSearch] = useState("");
             const [uploadRows, setUploadRows] = useState([]);
@@ -883,6 +890,7 @@ import {
             });
             const [results, setResults] = useState(null);
             const canvasRef = useRef(null);
+            const drawingInputRef = useRef(null);
 
             const selectedSizes = MATERIAL_SIZES[inputs.product];
             const selectedSize = selectedSizes[Number(inputs.rawSizeIndex)] || selectedSizes[0];
@@ -913,7 +921,7 @@ import {
                 return [item.product, item.requiredSize, item.notes, item.sourceDescription].join(" ").toLowerCase().includes(query);
             });
             const grandTotal = calculatedItems.reduce((sum, item) => sum + Number(item.totalOrderValue || 0), 0);
-            const drawingGrandTotal = drawingQuoteRows.reduce((sum, row) => sum + Number(row.totalOrderValue || 0), 0);
+            const drawingGrandTotal = drawingQuoteRows.filter(row => row.selected !== false).reduce((sum, row) => sum + Number(row.totalOrderValue || 0), 0);
 
             const setField = (name, value) => setInputs(prev => ({ ...prev, [name]: value }));
             const handleNumber = (e) => setField(e.target.name, e.target.value === "" ? "" : Number(e.target.value));
@@ -975,7 +983,7 @@ import {
                 setResults(null);
             };
 
-            const drawDiagram = (sheetL, sheetW, cutL, cutW, cols, rows, gap) => {
+            const drawDiagram = (sheetL, sheetW, layout, gap) => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
                 const ctx = canvas.getContext("2d");
@@ -1001,23 +1009,20 @@ import {
                 ctx.fillRect(0, 0, drawW, drawH);
                 ctx.strokeRect(0, 0, drawW, drawH);
                 const scale = drawW / sheetL;
-                const drawCutL = cutL * scale;
-                const drawCutW = cutW * scale;
-                const drawGap = gap * scale;
                 ctx.fillStyle = "#2563eb";
                 ctx.strokeStyle = "#1e3a8a";
                 ctx.lineWidth = 1;
-                for (let c = 0; c < cols; c++) {
-                    for (let r = 0; r < rows; r++) {
-                        const x = c * (drawCutL + drawGap);
-                        const y = r * (drawCutW + drawGap);
-                        ctx.fillRect(x + 1, y + 1, Math.max(1, drawCutL - 2), Math.max(1, drawCutW - 2));
-                        ctx.strokeRect(x, y, drawCutL, drawCutW);
-                    }
-                }
+                (layout.placements || []).forEach(placement => {
+                    const x = placement.x * scale;
+                    const y = placement.y * scale;
+                    const width = placement.w * scale;
+                    const height = placement.h * scale;
+                    ctx.fillRect(x + 1, y + 1, Math.max(1, width - 2), Math.max(1, height - 2));
+                    ctx.strokeRect(x, y, width, height);
+                });
                 ctx.fillStyle = "#0f172a";
                 ctx.font = "bold 12px Manrope, sans-serif";
-                ctx.fillText(`${cols * rows} pcs | Gap ${gap} mm`, 10, Math.max(18, drawH - 10));
+                ctx.fillText(`${layout.count} pcs | ${layout.orientation} | Gap ${gap} mm`, 10, Math.max(18, drawH - 10));
             };
 
             const calculate = () => {
@@ -1031,23 +1036,15 @@ import {
                     alert("Please enter valid sheet, cut size and raw sheet price.");
                     return;
                 }
-                const calcGrid = (L, W, l, w) => {
-                    const cols = Math.floor((L + gap) / (l + gap));
-                    const rows = Math.floor((W + gap) / (w + gap));
-                    return { count: Math.max(0, cols * rows), cols, rows };
-                };
-                const standard = calcGrid(vLen, vWid, cLen, cWid);
-                const rotated = calcGrid(vLen, vWid, cWid, cLen);
-                const best = standard.count >= rotated.count
-                    ? { ...standard, fitL: cLen, fitW: cWid, orientation: "Standard" }
-                    : { ...rotated, fitL: cWid, fitW: cLen, orientation: "Rotated" };
+                const best = calculateBestSheetFit(vLen, vWid, cLen, cWid, gap);
                 if (best.count <= 0) {
                     alert("Cut size is too large for the selected raw sheet.");
                     return;
                 }
                 const materialPerPiece = rawPrice / best.count;
                 const processingPerPiece = processingTotal;
-                const packagingPerPiece = inputs.packagingType === "percent" ? materialPerPiece * (Number(inputs.packagingCost) / 100) : Number(inputs.packagingCost || 0);
+                const packagingBase = materialPerPiece + processingPerPiece;
+                const packagingPerPiece = inputs.packagingType === "percent" ? packagingBase * (Number(inputs.packagingCost) / 100) : Number(inputs.packagingCost || 0);
                 const costBeforeProfit = materialPerPiece + processingPerPiece + packagingPerPiece;
                 const profitAmount = costBeforeProfit * (Number(inputs.profit || 0) / 100);
                 const finalSellingPrice = costBeforeProfit + profitAmount;
@@ -1073,7 +1070,7 @@ import {
                     layout: best
                 };
                 setResults(nextResults);
-                setTimeout(() => drawDiagram(vLen, vWid, best.fitL, best.fitW, best.cols, best.rows, gap), 80);
+                setTimeout(() => drawDiagram(vLen, vWid, best, gap), 80);
             };
 
             useEffect(() => {
@@ -1305,6 +1302,8 @@ import {
 
             const combinedRows = () => calculatedItems.map((item, index) => ({
                 "Sr No.": index + 1,
+                "Drawing No.": item.drawingNo || "",
+                Page: item.sourcePage || "",
                 Product: item.product,
                 "Required Size": item.requiredSize,
                 Thickness: item.cutThickness,
@@ -1349,7 +1348,9 @@ import {
 
             const exportCombinedXLSX = () => {
                 if (!calculatedItems.length || !window.XLSX) return;
-                const worksheet = XLSX.utils.json_to_sheet(combinedRows());
+                const rows = combinedRows();
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                styleWorksheet(worksheet, rows.length, Object.keys(rows[0]).length);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "KD Quotation");
                 XLSX.writeFile(workbook, `KD-Quotation_${currentDateISO()}.xlsx`);
@@ -1508,9 +1509,23 @@ import {
                 return sizes.find(size => !size.custom && size.l && size.w) || sizes[0];
             };
 
+            const getBestRawSheet = (product, partLength, partWidth) => {
+                const sizes = (MATERIAL_SIZES[product] || []).filter(size => !size.custom && size.l && size.w);
+                const fitting = sizes.filter(size => (
+                    (Number(size.l) >= Number(partLength) && Number(size.w) >= Number(partWidth)) ||
+                    (Number(size.l) >= Number(partWidth) && Number(size.w) >= Number(partLength))
+                ));
+                return (fitting.length ? fitting : sizes).sort((a, b) => (a.l * a.w) - (b.l * b.w))[0] || getDefaultRawSheet(product);
+            };
+
             const estimateRawSheetPrice = (product, rawLength, rawWidth, rawThickness) => {
                 const defaultSheet = getDefaultRawSheet(product);
-                if (defaultSheet.price) return defaultSheet.price;
+                if (defaultSheet.price) {
+                    const baseThickness = Number(defaultSheet.t || rawThickness || 5);
+                    const baseVolume = Number(defaultSheet.l) * Number(defaultSheet.w) * baseThickness;
+                    const requestedVolume = Number(rawLength || defaultSheet.l) * Number(rawWidth || defaultSheet.w) * Number(rawThickness || baseThickness);
+                    return Math.round(defaultSheet.price * (requestedVolume / baseVolume) * 100) / 100;
+                }
                 const ratePerSqmMm = {
                     "Bakelite / Phenolic Sheet": 135,
                     "FRP Sheet": 440,
@@ -1543,21 +1558,12 @@ import {
                 const packagingCost = Number(row.packagingCost ?? inputs.packagingCost ?? 0);
                 const profitPercent = Number(row.profitPercent ?? inputs.profit ?? 0);
 
-                const calcGrid = (L, W, l, w) => {
-                    if ([L, W, l, w].some(value => !value || value <= 0)) return { count: 0, cols: 0, rows: 0 };
-                    const cols = Math.floor((L + bladeGap) / (l + bladeGap));
-                    const rows = Math.floor((W + bladeGap) / (w + bladeGap));
-                    return { count: Math.max(0, cols * rows), cols, rows };
-                };
-                const standard = calcGrid(rawLength, rawWidth, cutLength, cutWidth);
-                const rotated = calcGrid(rawLength, rawWidth, cutWidth, cutLength);
-                const best = standard.count >= rotated.count
-                    ? { ...standard, orientation: "Standard", fitL: cutLength, fitW: cutWidth }
-                    : { ...rotated, orientation: "Rotated", fitL: cutWidth, fitW: cutLength };
+                const best = calculateBestSheetFit(rawLength, rawWidth, cutLength, cutWidth, bladeGap);
                 const piecesPerSheet = best.count || 0;
                 const materialPerPiece = piecesPerSheet ? rawPrice / piecesPerSheet : 0;
+                const packagingBase = materialPerPiece + processingPerPiece;
                 const packagingPerPiece = packagingType === "percent"
-                    ? materialPerPiece * (packagingCost / 100)
+                    ? packagingBase * (packagingCost / 100)
                     : packagingCost;
                 const costBeforeProfit = materialPerPiece + processingPerPiece + packagingPerPiece;
                 const profitAmount = costBeforeProfit * (profitPercent / 100);
@@ -1593,13 +1599,18 @@ import {
                     totalOrderValue: finalSellingPrice * quantity,
                     layout: best,
                     manualPrice: row.manualPrice,
-                    needsReview: !cutLength || !cutWidth || !rawPrice || !piecesPerSheet
+                    needsReview: !cutLength || !cutWidth || !rawPrice || !piecesPerSheet || Number(row.detectionConfidence || 100) < 70
                 };
             };
 
-            const findDrawingNumber = (text, fileName) => {
-                const match = text.match(/(?:drawing|drg|dwg|part)\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9_./-]{3,})/i);
-                return match ? match[1] : fileName.replace(/\.[^.]+$/, "");
+            const findDrawingNumber = (text, fallbackName) => {
+                const patterns = [
+                    /(?:drawing|drg\.?|dwg\.?)\s*(?:(?:no\.?|number|#)\s*[:\-]?|:)\s*([A-Z0-9_./-]{3,})/i,
+                    /(?:part|item)\s*(?:no\.?|number|#)\s*[:\-]?\s*([A-Z0-9_./-]{3,})/i,
+                    /\b(?:document|doc)\s*no\.?\s*[:\-]?\s*([A-Z0-9_./-]{3,})/i
+                ];
+                const match = patterns.map(pattern => String(text || "").match(pattern)).find(Boolean);
+                return match ? match[1].replace(/[.,;:]$/, "") : fallbackName.replace(/\.[^.]+$/, "");
             };
 
             const findLabelNumber = (text, labels) => {
@@ -1617,73 +1628,92 @@ import {
             };
 
             const inferDrawingOperations = (text, parsed) => {
-                const lower = String(text || "").toLowerCase();
-                const holes = Number(parsed.holeCount || 0);
-                return {
-                    sheetCutting: parsed.cutLength && parsed.cutWidth ? 8 : 0,
-                    cornerCutting: parsed.cornerRadius ? 4 : 0,
-                    drilling: holes ? Math.max(4, holes * 1.5) : (/(hole|drill|dia)/i.test(lower) ? 4 : 0),
-                    tapping: /tap|thread/i.test(lower) ? 4 : 0,
-                    chamfering: /chamfer|bevel/i.test(lower) ? 3 : 0,
-                    boxCutting: /cutout|cut-out|window|slot/i.test(lower) ? 10 : 0,
-                    uShapeCutting: /u shape|u-shape/i.test(lower) ? 10 : 0,
-                    roundCorners: parsed.cornerRadius ? 3 : 0,
-                    additionalCustomisation: /counter|countersink|counterbore|special/i.test(lower) ? 5 : 0
-                };
+                const estimate = estimateProcessingCosts({ text, parsed, product: parsed.product || parsed.material });
+                return { ...estimate.details, operationCounts: estimate.counts };
             };
 
-            const parseDrawingTextToRow = (fileName, text) => {
+            const parseDrawingTextToRow = (fileName, text, metadata = {}) => {
                 const combined = `${fileName}\n${String(text || "").replace(/\s+/g, " ")}`;
                 const triplet = parseDimensionTriplet(combined);
                 const product = matchProductFromMaterial(combined);
-                const defaultSheet = getDefaultRawSheet(product);
-                const length = findLabelNumber(combined, ["overall length", "length", "len", "\\bl\\b"]) || triplet[0] || inputs.cLen;
-                const width = findLabelNumber(combined, ["overall width", "width", "\\bw\\b"]) || triplet[1] || inputs.cWid;
-                const thickness = findLabelNumber(combined, ["thickness", "thk", "\\bt\\b"]) || triplet[2] || inputs.pieceThickness || defaultSheet.t || 5;
+                const baseSheet = getDefaultRawSheet(product);
+                const length = findLabelNumber(combined, ["overall length", "finished length", "length", "len", "\\bl\\b"]) || triplet[0] || 0;
+                const width = findLabelNumber(combined, ["overall width", "finished width", "width", "\\bw\\b"]) || triplet[1] || 0;
+                const detectedThickness = findLabelNumber(combined, ["thickness", "thk", "thk\\.", "\\bt\\b"]) || triplet[2] || 0;
+                const thickness = detectedThickness || baseSheet.t || 5;
+                const defaultSheet = getBestRawSheet(product, length, width);
                 const quantityMatch = combined.match(/(?:qty|quantity|qnty)\s*[:= -]*(\d+)/i);
-                const holeCountMatch = combined.match(/(\d+)\s*(?:nos\.?|holes?|hole)/i);
-                const holeDiaMatch = combined.match(/(?:hole\s*(?:dia|diameter)?|dia\.?|diameter|drill)\s*[:= -]*(\d+(?:\.\d+)?)/i);
+                const holeCountMatch = combined.match(/(\d+)\s*(?:x|×|-)?\s*(?:nos\.?\s*)?(?:holes?|hole|drill)/i) || combined.match(/(\d+)\s*(?:nos\.?|places?)?\s*(?:x|×)?\s*(?:ø|⌀|dia)/i);
+                const holeDiaMatch = combined.match(/(?:ø|⌀|hole\s*(?:dia|diameter)?|dia\.?|diameter|drill)\s*[:= -]*(\d+(?:\.\d+)?)/i);
                 const radiusMatch = combined.match(/\bR\s*(\d+(?:\.\d+)?)/i);
-                const materialMatch = combined.match(/material\s*[:= -]*([A-Z0-9 /+.-]{2,40})/i);
+                const materialMatch = combined.match(/(?:material|matl\.?|grade)\s*[:= -]*([A-Z0-9 /+.-]{2,40})/i);
+                const rawSizeMatch = combined.match(/(?:raw\s*(?:sheet|stock)|stock\s*size)\s*(?:size)?\s*[:= -]*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)(?:\s*[x×]\s*(\d+(?:\.\d+)?))?/i);
+                const pageLabel = metadata.pageCount > 1 ? `${fileName.replace(/\.[^.]+$/, "")}-P${metadata.pageNumber}` : fileName;
+                const drawingNumberDetected = /(?:drawing|drg\.?|dwg\.?|part|item|document|doc)\s*(?:no\.?|number|#|:)/i.test(combined);
                 const parsed = {
                     product,
                     material: materialMatch ? materialMatch[1].trim() : product.replace(" Sheet", ""),
                     fileName,
-                    drawingNo: findDrawingNumber(combined, fileName),
+                    sourcePage: metadata.pageNumber || 1,
+                    sourcePageCount: metadata.pageCount || 1,
+                    ocrUsed: Boolean(metadata.ocrUsed),
+                    drawingNo: findDrawingNumber(combined, pageLabel),
                     cutLength: Number(length || 0),
                     cutWidth: Number(width || 0),
                     cutThickness: Number(thickness || 0),
-                    rawLength: defaultSheet.l,
-                    rawWidth: defaultSheet.w,
-                    rawThickness: defaultSheet.t || thickness || 5,
-                    rawPrice: estimateRawSheetPrice(product, defaultSheet.l, defaultSheet.w, defaultSheet.t || thickness || 5),
+                    rawLength: rawSizeMatch ? Number(rawSizeMatch[1]) : defaultSheet.l,
+                    rawWidth: rawSizeMatch ? Number(rawSizeMatch[2]) : defaultSheet.w,
+                    rawThickness: rawSizeMatch && rawSizeMatch[3] ? Number(rawSizeMatch[3]) : (defaultSheet.t || thickness || 5),
                     quantity: quantityMatch ? Number(quantityMatch[1]) : 1,
                     holeCount: holeCountMatch ? Number(holeCountMatch[1]) : 0,
                     holeDiameter: holeDiaMatch ? Number(holeDiaMatch[1]) : "",
-                    cornerRadius: radiusMatch ? `R${radiusMatch[1]}` : "",
+                    cornerRadius: radiusMatch ? Number(radiusMatch[1]) : "",
                     bladeGap: inputs.blade || 2,
                     packagingType: inputs.packagingType || "percent",
-                    packagingCost: inputs.packagingCost || 0,
-                    profitPercent: inputs.profit || 0,
+                    packagingCost: 2.5,
+                    profitPercent: 10,
                     selected: true,
-                    extractedTextPreview: combined.slice(0, 450)
+                    detectedFields: {
+                        drawingNo: drawingNumberDetected,
+                        material: Boolean(materialMatch) || /\b(?:bakelite|phenolic|frp|fr4|g10|glass epoxy|acrylic|nylon|delrin|acetal|polycarbonate)\b/i.test(combined),
+                        length: Boolean(length),
+                        width: Boolean(width),
+                        thickness: Boolean(detectedThickness)
+                    },
+                    extractedTextPreview: combined.slice(0, 1000)
                 };
-                const processingDetailsForDrawing = inferDrawingOperations(combined, parsed);
+                parsed.rawPrice = estimateRawSheetPrice(product, parsed.rawLength, parsed.rawWidth, parsed.rawThickness);
+                const inferredProcessing = inferDrawingOperations(combined, parsed);
+                const { operationCounts, ...processingDetailsForDrawing } = inferredProcessing;
                 const operationSummary = Object.entries(processingDetailsForDrawing)
                     .filter(([, value]) => Number(value || 0) > 0)
                     .map(([key, value]) => `${processingLabels[key]} ₹${money(value)}`)
                     .join(", ");
-                return calculateDrawingPricing({
+                const operationCountSummary = [
+                    operationCounts.holes ? `${operationCounts.holes} holes` : "",
+                    operationCounts.taps ? `${operationCounts.taps} taps` : "",
+                    operationCounts.cutouts ? `${operationCounts.cutouts} cut-outs` : "",
+                    operationCounts.slots ? `${operationCounts.slots} slots` : "",
+                    operationCounts.cornerCuts ? `${operationCounts.cornerCuts} corner cuts` : "",
+                    operationCounts.roundCorners ? `${operationCounts.roundCorners} round corners` : "",
+                    operationCounts.otherOperations ? `${operationCounts.otherOperations} other operations` : ""
+                ].filter(Boolean).join(" · ");
+                let priced = calculateDrawingPricing({
                     ...parsed,
                     processingDetails: processingDetailsForDrawing,
-                    operationSummary,
+                    operationCounts,
+                    operationSummary: [operationCountSummary, operationSummary].filter(Boolean).join(" | "),
                     notes: [
-                        `Auto-read from ${fileName}.`,
+                        `Auto-read from ${fileName}${metadata.pageCount > 1 ? `, page ${metadata.pageNumber}` : ""}.`,
+                        metadata.ocrUsed ? "OCR used for scanned page." : "",
                         parsed.holeCount ? `${parsed.holeCount} holes detected.` : "",
                         operationSummary || "No extra operations detected.",
                         "Review dimensions and raw sheet price before final quotation."
                     ].filter(Boolean).join(" ")
                 });
+                const detectionConfidence = calculateDetectionConfidence({ ...priced, cutThickness: detectedThickness });
+                priced = calculateDrawingPricing({ ...priced, detectionConfidence });
+                return { ...priced, detectionConfidence };
             };
 
             const ensurePDFRuntime = () => {
@@ -1691,48 +1721,75 @@ import {
                 window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
             };
 
-            const extractPDFText = async (fileName, buffer) => {
+            const extractPDFPages = async (fileName, file) => {
                 ensurePDFRuntime();
-                const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+                const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
                 const pages = [];
                 for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) {
+                    setDrawingUploadMessage(`Reading ${fileName} · page ${pageNo} of ${pdf.numPages}…`);
                     const page = await pdf.getPage(pageNo);
                     const content = await page.getTextContent();
-                    pages.push(content.items.map(item => item.str).join(" "));
+                    let text = content.items.map(item => item.str).join(" ").trim();
+                    let ocrUsed = false;
+                    if (text.replace(/\s/g, "").length < 28) {
+                        setDrawingUploadMessage(`Scanning ${fileName} · page ${pageNo} of ${pdf.numPages} with OCR…`);
+                        try {
+                            text = await readOutlinedText(window.pdfjsLib, file, pageNo);
+                            ocrUsed = true;
+                        } catch (ocrError) {
+                            text = text || "";
+                        }
+                    }
+                    pages.push({ text, pageNumber: pageNo, pageCount: pdf.numPages, ocrUsed });
                 }
-                return pages.join("\n");
+                await pdf.destroy();
+                return pages;
             };
 
-            const handleDrawingPDFUpload = async (event) => {
-                const files = Array.from(event.target.files || []);
+            const processDrawingFiles = async (filesValue) => {
+                const files = Array.from(filesValue || []);
                 if (!files.length) return;
                 setReadingDrawings(true);
                 setDrawingUploadMessage("Reading drawing files...");
                 try {
+                    await ensureAdminLibraries();
                     const parsedRows = [];
                     for (const file of files) {
                         const ext = file.name.split(".").pop().toLowerCase();
                         if (ext === "pdf") {
-                            const text = await extractPDFText(file.name, await file.arrayBuffer());
-                            parsedRows.push(parseDrawingTextToRow(file.name, text));
+                            const pages = await extractPDFPages(file.name, file);
+                            pages.forEach(page => parsedRows.push(parseDrawingTextToRow(file.name, page.text, page)));
                         } else if (ext === "zip") {
                             if (!window.JSZip) throw new Error("ZIP reader library is not loaded.");
                             const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
                             const pdfEntries = Object.values(zip.files).filter(entry => !entry.dir && /\.pdf$/i.test(entry.name));
                             for (const entry of pdfEntries) {
-                                const text = await extractPDFText(entry.name, await entry.async("arraybuffer"));
-                                parsedRows.push(parseDrawingTextToRow(entry.name.split("/").pop(), text));
+                                const entryName = entry.name.split("/").pop();
+                                const entryFile = new File([await entry.async("arraybuffer")], entryName, { type: "application/pdf" });
+                                const pages = await extractPDFPages(entryName, entryFile);
+                                pages.forEach(page => parsedRows.push(parseDrawingTextToRow(entryName, page.text, page)));
                             }
                         }
                     }
-                    setDrawingQuoteRows(parsedRows);
-                    setDrawingUploadMessage(parsedRows.length ? `${parsedRows.length} drawing price rows generated. Review and edit before adding to quotation.` : "No PDF drawings found in the selected file.");
+                    setDrawingQuoteRows(previous => [...previous, ...parsedRows]);
+                    setDrawingUploadMessage(parsedRows.length ? `${parsedRows.length} drawing row${parsedRows.length === 1 ? "" : "s"} generated. Every PDF page is priced separately; review highlighted fields before export.` : "No PDF drawings found in the selected file.");
+                    if (parsedRows.length) setTimeout(() => document.getElementById("drawing-pricing-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
                 } catch (error) {
                     setDrawingUploadMessage(`Could not read drawings: ${error.message}`);
                 } finally {
                     setReadingDrawings(false);
-                    event.target.value = "";
                 }
+            };
+
+            const handleDrawingPDFUpload = async (event) => {
+                await processDrawingFiles(event.target.files);
+                event.target.value = "";
+            };
+
+            const handleDrawingDrop = async (event) => {
+                event.preventDefault();
+                setDrawingDragActive(false);
+                await processDrawingFiles(event.dataTransfer.files);
             };
 
             const updateDrawingQuoteRow = (index, field, value) => {
@@ -1740,6 +1797,8 @@ import {
                     if (rowIndex !== index) return row;
                     let nextRow = { ...row, [field]: value };
                     if (field === "selected") return nextRow;
+                    const confidenceField = { drawingNo: "drawingNo", product: "material", cutLength: "length", cutWidth: "width", cutThickness: "thickness" }[field];
+                    if (confidenceField) nextRow.detectedFields = { ...nextRow.detectedFields, [confidenceField]: Boolean(value) };
                     if (field === "processingCost") {
                         nextRow = { ...nextRow, processingOverride: true };
                     }
@@ -1762,18 +1821,28 @@ import {
                             rawPrice: estimateRawSheetPrice(value, sheet.l, sheet.w, sheet.t || nextRow.cutThickness || nextRow.rawThickness || 5)
                         };
                     }
+                    if (field === "cutThickness") {
+                        nextRow = {
+                            ...nextRow,
+                            rawThickness: Number(value || nextRow.rawThickness || 0),
+                            rawPrice: estimateRawSheetPrice(nextRow.product, nextRow.rawLength, nextRow.rawWidth, Number(value || nextRow.rawThickness || 5))
+                        };
+                    }
                     if (!nextRow.processingOverride && ["cutLength", "cutWidth", "holeCount", "holeDiameter", "cornerRadius"].includes(field)) {
-                        const inferred = inferDrawingOperations(nextRow.extractedTextPreview || "", nextRow);
+                        const inferredResult = inferDrawingOperations(nextRow.extractedTextPreview || "", nextRow);
+                        const { operationCounts, ...inferred } = inferredResult;
                         nextRow = {
                             ...nextRow,
                             processingDetails: inferred,
+                            operationCounts,
                             operationSummary: Object.entries(inferred)
                                 .filter(([, amount]) => Number(amount || 0) > 0)
                                 .map(([key, amount]) => `${processingLabels[key]} ₹${money(amount)}`)
                                 .join(", ")
                         };
                     }
-                    return calculateDrawingPricing(nextRow);
+                    const detectionConfidence = calculateDetectionConfidence(nextRow);
+                    return calculateDrawingPricing({ ...nextRow, detectionConfidence });
                 }));
             };
 
@@ -1781,6 +1850,8 @@ import {
                 const priced = calculateDrawingPricing(row);
                 return {
                     id: Date.now() + Math.random(),
+                    drawingNo: priced.drawingNo,
+                    sourcePage: priced.sourcePage,
                     product: priced.product,
                     rawLength: Number(priced.rawLength),
                     rawWidth: Number(priced.rawWidth),
@@ -1837,12 +1908,11 @@ import {
                 setDrawingUploadMessage(`${selectedRows.length} drawing rows added to the quotation list.`);
             };
 
-            const exportDrawingRowsXLSX = () => {
-                if (!drawingQuoteRows.length || !window.XLSX) return;
-                const rows = drawingQuoteRows.map((row, index) => ({
+            const drawingExportRows = () => drawingQuoteRows.map((row, index) => ({
                     "Sr No.": index + 1,
                     File: row.fileName,
-                    Drawing: row.drawingNo,
+                    Page: row.sourcePage || 1,
+                    "Drawing No.": row.drawingNo,
                     Product: row.product,
                     Material: row.material,
                     "Cut Length": row.cutLength,
@@ -1852,6 +1922,13 @@ import {
                     "Raw Sheet": `${row.rawLength} x ${row.rawWidth} x ${row.rawThickness} mm`,
                     "Raw Price": money(row.rawPrice),
                     "Pieces / Sheet": row.piecesPerSheet,
+                    "Detected Operations": row.operationSummary || "",
+                    "Cutting / Piece": money(row.processingDetails?.sheetCutting),
+                    "Corner Cuts / Piece": money(row.processingDetails?.cornerCutting),
+                    "Drilling / Piece": money(row.processingDetails?.drilling),
+                    "Tapping / Piece": money(row.processingDetails?.tapping),
+                    "Cut-outs / Piece": money(row.processingDetails?.boxCutting),
+                    "Round Corners / Piece": money(row.processingDetails?.roundCorners),
                     "Material / Piece": money(row.materialPerPiece),
                     "Processing / Piece": money(row.processingCost),
                     "P&F %": row.packagingCost,
@@ -1859,9 +1936,65 @@ import {
                     "Profit %": row.profitPercent,
                     "Final / Piece": money(row.finalSellingPrice),
                     Total: money(row.totalOrderValue),
+                    Confidence: `${row.detectionConfidence || 0}%`,
                     Notes: row.notes
                 }));
+
+            const styleWorksheet = (worksheet, rowCount, columnCount) => {
+                const border = {
+                    top: { style: "thin", color: { rgb: "CBD5E1" } },
+                    bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+                    left: { style: "thin", color: { rgb: "CBD5E1" } },
+                    right: { style: "thin", color: { rgb: "CBD5E1" } }
+                };
+                for (let row = 0; row <= rowCount; row += 1) {
+                    for (let column = 0; column < columnCount; column += 1) {
+                        const address = XLSX.utils.encode_cell({ r: row, c: column });
+                        if (!worksheet[address]) continue;
+                        worksheet[address].s = {
+                            border,
+                            alignment: { vertical: "center", wrapText: true },
+                            ...(row === 0 ? { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "123C34" } } } : {})
+                        };
+                    }
+                }
+                worksheet["!autofilter"] = { ref: XLSX.utils.encode_range({ r: 0, c: 0 }, { r: Math.max(0, rowCount), c: columnCount - 1 }) };
+                worksheet["!cols"] = Array.from({ length: columnCount }, (_, index) => ({ wch: index === columnCount - 1 ? 48 : index < 4 ? 18 : 14 }));
+            };
+
+            const copyDrawingPricingTable = async () => {
+                if (!drawingQuoteRows.length) return;
+                const rows = drawingExportRows();
+                const headers = Object.keys(rows[0]);
+                const escapeHtml = value => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const html = `<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px"><thead><tr>${headers.map(header => `<th style="border:1px solid #64748b;background:#123c34;color:#fff;padding:7px">${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${headers.map(header => `<td style="border:1px solid #94a3b8;padding:7px">${escapeHtml(row[header])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+                const plain = [headers, ...rows.map(row => headers.map(header => row[header]))].map(row => row.join("\t")).join("\n");
+                try {
+                    if (window.ClipboardItem && navigator.clipboard?.write) {
+                        await navigator.clipboard.write([new ClipboardItem({
+                            "text/html": new Blob([html], { type: "text/html" }),
+                            "text/plain": new Blob([plain], { type: "text/plain" })
+                        })]);
+                    } else {
+                        await navigator.clipboard.writeText(plain);
+                    }
+                    setDrawingUploadMessage("Pricing table copied with borders. Paste directly into Excel or an email.");
+                } catch (error) {
+                    const area = document.createElement("textarea");
+                    area.value = plain;
+                    document.body.appendChild(area);
+                    area.select();
+                    document.execCommand("copy");
+                    area.remove();
+                    setDrawingUploadMessage("Pricing table copied. Paste it into Excel to continue.");
+                }
+            };
+
+            const exportDrawingRowsXLSX = () => {
+                if (!drawingQuoteRows.length || !window.XLSX) return;
+                const rows = drawingExportRows();
                 const worksheet = XLSX.utils.json_to_sheet(rows);
+                styleWorksheet(worksheet, rows.length, Object.keys(rows[0]).length);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Drawing Pricing");
                 XLSX.writeFile(workbook, `KD-Drawing-Pricing_${currentDateISO()}.xlsx`);
@@ -1920,9 +2053,36 @@ import {
             };
 
             return (
-                <div className="pt-32 pb-24 bg-slate-100 min-h-screen">
-                    <SectionTitle eyebrow="KD Internal Team Only" title="KD Internal Pricing Calculator" subtitle="For internal estimation only. Final quotation may vary based on material availability, processing complexity and order quantity." />
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-6">
+                <div className="pricing-studio pt-32 pb-24 min-h-screen">
+                    <section className="pricing-hero">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+                            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+                                <div>
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.18em] text-emerald-200"><Icon name="wand-sparkles" className="h-4 w-4" /> Internal pricing intelligence</div>
+                                    <h1 className="site-display mt-5 text-4xl font-bold leading-tight text-white sm:text-5xl">Drawing to cost,<br /><span className="text-emerald-300">without the spreadsheet chase.</span></h1>
+                                    <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">Upload one drawing, several PDFs, or a ZIP. Every PDF page becomes its own editable pricing row with detected dimensions, material, operations, sheet yield, P&amp;F and profit.</p>
+                                    <div className="mt-7 grid grid-cols-3 gap-3">
+                                        {[['2.5%', 'Default P&F'], ['10%', 'Default profit'], [drawingQuoteRows.length, 'Drawing rows']].map(([value, label]) => <div key={label} className="pricing-hero-stat"><strong>{value}</strong><span>{label}</span></div>)}
+                                    </div>
+                                </div>
+                                <div
+                                    className={`drawing-dropzone ${isDrawingDragActive ? "is-active" : ""}`}
+                                    onDragEnter={(event) => { event.preventDefault(); setDrawingDragActive(true); }}
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDrawingDragActive(false); }}
+                                    onDrop={handleDrawingDrop}
+                                >
+                                    <input ref={drawingInputRef} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" onChange={handleDrawingPDFUpload} className="sr-only" />
+                                    <div className="drawing-dropzone-icon"><Icon name={isReadingDrawings ? "loader-circle" : "upload-cloud"} className={`h-8 w-8 ${isReadingDrawings ? "animate-spin" : ""}`} /></div>
+                                    <h2 className="mt-5 text-xl font-extrabold text-white">{isReadingDrawings ? "Reading and pricing drawings…" : "Drop drawings here"}</h2>
+                                    <p className="mt-2 text-sm text-slate-300">PDF, multiple PDFs, or a ZIP of PDFs · multi-page PDFs supported</p>
+                                    <button type="button" disabled={isReadingDrawings} onClick={() => drawingInputRef.current?.click()} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-300 px-5 py-3 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-200 disabled:opacity-60"><Icon name="file-up" className="h-4 w-4" /> Choose drawings</button>
+                                    <div className="mt-5 flex items-center justify-center gap-2 text-xs font-bold text-slate-400"><Icon name="shield-check" className="h-4 w-4" /> Files stay in this browser session</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid lg:grid-cols-12 gap-6">
                         <div className="lg:col-span-4 space-y-5 no-print">
                             <CalcStep number="1" title="Select Material">
                                 <label className="block">
@@ -2010,7 +2170,7 @@ import {
                                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                                         <Metric label="Material Cost" value={`₹${money(results.materialPerPiece)}`} />
                                         <Metric label="Processing" value={`₹${money(results.processingPerPiece)}`} />
-                                        <Metric label="Packaging" value={`₹${money(results.packagingPerPiece)}`} />
+                                        <Metric label="P&F (material + processing)" value={`₹${money(results.packagingPerPiece)}`} />
                                         <Metric label="Profit" value={`${results.profitPercent}%`} />
                                         <Metric label="Final Selling Price" value={`₹${money(results.finalSellingPrice)}`} highlight />
                                         <Metric label="Total Order Value" value={`₹${money(results.totalOrderValue)}`} />
@@ -2051,7 +2211,7 @@ import {
                                                 <PriceRow label="Wastage Percentage" value={`${results.wastage.toFixed(1)}%`} />
                                                 <PriceRow label="Material Cost / Piece" value={`INR ${money(results.materialPerPiece)}`} />
                                                 <PriceRow label="Processing Cost / Piece" value={`INR ${money(results.processingPerPiece)}`} />
-                                                <PriceRow label="Packaging & Forwarding / Piece" value={`INR ${money(results.packagingPerPiece)}`} />
+                                                <PriceRow label="P&F / Piece (Material + Processing)" value={`INR ${money(results.packagingPerPiece)}`} />
                                                 <PriceRow label="Total Before Profit" value={`INR ${money(results.costBeforeProfit)}`} />
                                                 <PriceRow label="Profit Percentage" value={`${results.profitPercent}%`} />
                                                 <PriceRow label="Profit Amount" value={`INR ${money(results.profitAmount)}`} />
@@ -2066,19 +2226,21 @@ import {
                         </div>
                     </div>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <div id="drawing-pricing-workbench" className="pricing-workbench bg-white rounded-xl border border-slate-200 shadow-sm p-5 scroll-mt-28">
                             <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-5">
                                 <div>
-                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-600">PDF / ZIP Drawing Pricing</p>
-                                    <h3 className="text-2xl font-extrabold text-slate-950">Upload Product Drawings and Calculate Price</h3>
+                                    <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Smart drawing workbench</p>
+                                    <h3 className="text-2xl font-extrabold text-slate-950">Review extracted details and pricing</h3>
                                     <p className="text-sm text-slate-500 mt-1 max-w-3xl">
-                                        Upload one PDF, multiple PDFs, or a ZIP containing drawings. The system reads available drawing text, estimates size/material/operations, and creates editable price rows for review.
+                                        Each page is a separate row. Amber confidence badges need a quick check; all detected values and calculated costs remain editable.
                                     </p>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <input type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" onChange={handleDrawingPDFUpload} className="text-sm rounded-md border border-slate-200 bg-slate-50 px-3 py-2" />
-                                    <button type="button" onClick={addDrawingRowsToQuote} disabled={!drawingQuoteRows.length} className="rounded-md bg-slate-900 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">Add Selected to Quote</button>
-                                    <button type="button" onClick={exportDrawingRowsXLSX} disabled={!drawingQuoteRows.length} className="rounded-md border border-slate-300 px-4 py-2 text-xs font-extrabold text-slate-700 disabled:opacity-50">Export Table</button>
+                                <div className="flex flex-wrap gap-2">
+                                    <button type="button" onClick={() => drawingInputRef.current?.click()} className="pricing-button-secondary"><Icon name="file-up" className="h-4 w-4" /> Add drawings</button>
+                                    <button type="button" onClick={copyDrawingPricingTable} disabled={!drawingQuoteRows.length} className="pricing-button-secondary disabled:opacity-40"><Icon name="copy" className="h-4 w-4" /> Copy with borders</button>
+                                    <button type="button" onClick={exportDrawingRowsXLSX} disabled={!drawingQuoteRows.length} className="pricing-button-secondary disabled:opacity-40"><Icon name="file-spreadsheet" className="h-4 w-4" /> Export Excel</button>
+                                    <button type="button" onClick={addDrawingRowsToQuote} disabled={!drawingQuoteRows.length} className="pricing-button-primary disabled:opacity-40"><Icon name="check" className="h-4 w-4" /> Add selected to quote</button>
+                                    <button type="button" onClick={() => setDrawingQuoteRows([])} disabled={!drawingQuoteRows.length} className="pricing-button-quiet disabled:opacity-40">Clear</button>
                                 </div>
                             </div>
                             {(drawingUploadMessage || isReadingDrawings) && (
@@ -2089,10 +2251,10 @@ import {
                             {drawingQuoteRows.length > 0 && (
                                 <div className="space-y-4">
                                     <div className="overflow-x-auto rounded-lg border border-slate-200">
-                                        <table className="w-full min-w-[1900px] text-xs">
+                                        <table id="drawingPricingTable" className="w-full min-w-[2100px] text-xs">
                                             <thead className="bg-slate-50 uppercase tracking-wider text-slate-500">
                                                 <tr>
-                                                    {["Use", "File", "Product", "Length", "Width", "Thick.", "Qty", "Raw Sheet", "Raw Price", "Holes", "Operations", "Pcs/Sheet", "Material", "Processing", "P&F %", "Profit %", "Final/Pc", "Total", "Review"].map(head => <th key={head} className="p-2 text-left">{head}</th>)}
+                                                    {["Use", "File / page", "Drawing No.", "Material", "Length", "Width", "Thick.", "Qty", "Raw Sheet", "Raw Price", "Holes", "Detected operations", "Pcs/Sheet", "Material/Pc", "Processing/Pc", "P&F %", "Profit %", "Cost/Pc", "Total", "Confidence"].map(head => <th key={head} className="p-2 text-left">{head}</th>)}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -2101,9 +2263,12 @@ import {
                                                         <td className="p-2">
                                                             <input type="checkbox" checked={row.selected !== false} onChange={(e) => updateDrawingQuoteRow(index, "selected", e.target.checked)} />
                                                         </td>
-                                                        <td className="p-2 min-w-[180px]">
+                                                        <td className="p-2 min-w-[160px]">
                                                             <div className="font-extrabold text-slate-950">{row.fileName}</div>
-                                                            <input value={row.drawingNo || ""} onChange={(e) => updateDrawingQuoteRow(index, "drawingNo", e.target.value)} className="mt-1 w-full rounded border border-slate-200 px-2 py-1" placeholder="Drawing no." />
+                                                            <div className="mt-1 flex gap-1"><span className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-600">Page {row.sourcePage || 1}/{row.sourcePageCount || 1}</span>{row.ocrUsed && <span className="rounded bg-violet-50 px-1.5 py-0.5 font-bold text-violet-700">OCR</span>}</div>
+                                                        </td>
+                                                        <td className="p-2 min-w-[150px]">
+                                                            <input value={row.drawingNo || ""} onChange={(e) => updateDrawingQuoteRow(index, "drawingNo", e.target.value)} className="w-full rounded border border-slate-200 px-2 py-1 font-bold" placeholder="Drawing no." />
                                                         </td>
                                                         <td className="p-2">
                                                             <select value={row.product} onChange={(e) => updateDrawingQuoteRow(index, "product", e.target.value)} className="w-[170px] rounded border border-slate-200 bg-white px-2 py-1">
@@ -2121,7 +2286,7 @@ import {
                                                                 <input type="number" title="Raw thickness" value={row.rawThickness || ""} onChange={(e) => updateDrawingQuoteRow(index, "rawThickness", Number(e.target.value))} className="w-full rounded border border-slate-200 px-2 py-1" />
                                                             </div>
                                                         </td>
-                                                        <td className="p-2"><input type="number" value={Number(row.rawPrice || 0).toFixed(2)} onChange={(e) => updateDrawingQuoteRow(index, "rawPrice", Number(e.target.value))} className="w-24 rounded border border-slate-200 px-2 py-1" /></td>
+                                                        <td className="p-2"><input type="number" value={Number(row.rawPrice || 0).toFixed(2)} onChange={(e) => updateDrawingQuoteRow(index, "rawPrice", Number(e.target.value))} className="w-24 rounded border border-slate-200 px-2 py-1" title="Estimated raw sheet price; confirm against current purchase rate" /></td>
                                                         <td className="p-2">
                                                             <div className="flex gap-1">
                                                                 <input type="number" title="Hole count" value={row.holeCount || ""} onChange={(e) => updateDrawingQuoteRow(index, "holeCount", Number(e.target.value))} className="w-14 rounded border border-slate-200 px-2 py-1" />
@@ -2132,13 +2297,13 @@ import {
                                                         <td className="p-2 font-bold">{row.piecesPerSheet || 0}</td>
                                                         <td className="p-2">₹{money(row.materialPerPiece)}</td>
                                                         <td className="p-2"><input type="number" value={money(row.processingCost)} onChange={(e) => updateDrawingQuoteRow(index, "processingCost", Number(e.target.value))} className="w-20 rounded border border-slate-200 px-2 py-1" /></td>
-                                                        <td className="p-2"><input type="number" value={money(row.packagingCost)} onChange={(e) => updateDrawingQuoteRow(index, "packagingCost", Number(e.target.value))} className="w-16 rounded border border-slate-200 px-2 py-1" title="P&F percentage of material cost" aria-label="P&F percentage" /></td>
+                                                        <td className="p-2"><input type="number" value={money(row.packagingCost)} onChange={(e) => updateDrawingQuoteRow(index, "packagingCost", Number(e.target.value))} className="w-16 rounded border border-slate-200 px-2 py-1" title="P&F percentage of material plus processing cost" aria-label="P&F percentage" /></td>
                                                         <td className="p-2"><input type="number" value={row.profitPercent || 0} onChange={(e) => updateDrawingQuoteRow(index, "profitPercent", Number(e.target.value))} className="w-16 rounded border border-slate-200 px-2 py-1" /></td>
                                                         <td className="p-2"><input type="number" value={money(row.finalSellingPrice)} onChange={(e) => updateDrawingQuoteRow(index, "finalSellingPrice", Number(e.target.value))} className="w-24 rounded border border-slate-200 px-2 py-1 font-bold text-slate-950" /></td>
                                                         <td className="p-2 font-extrabold">₹{money(row.totalOrderValue)}</td>
                                                         <td className="p-2">
-                                                            <span className={`rounded px-2 py-1 font-extrabold ${row.needsReview ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                                                                {row.needsReview ? "Review" : "OK"}
+                                                            <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-extrabold ${row.needsReview ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                                                <Icon name={row.needsReview ? "alert-circle" : "check-circle"} className="h-3.5 w-3.5" /> {row.detectionConfidence || 0}%
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -2147,8 +2312,8 @@ import {
                                         </table>
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                        <p className="text-xs text-slate-500 max-w-3xl">PDF extraction works best when drawing dimensions are searchable text. Scanned image-only PDFs may need manual entry after upload.</p>
-                                        <div className="text-xl font-extrabold text-slate-950">Drawing Total: ₹{money(drawingGrandTotal)}</div>
+                                        <p className="text-xs text-slate-500 max-w-3xl">The calculator uses PDF text first and automatically runs in-browser OCR when a page is scanned. Raw sheet rates and processing are working estimates—confirm amber rows and current purchase rates before quoting.</p>
+                                        <div className="text-right"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Selected drawing total</p><div className="text-xl font-extrabold text-slate-950">₹{money(drawingGrandTotal)}</div></div>
                                     </div>
                                 </div>
                             )}
@@ -2171,16 +2336,17 @@ import {
                             </div>
                             <input value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} placeholder="Search calculated items..." className="mb-4 w-full rounded-md border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-blue-500" />
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[1180px] text-sm">
+                                <table className="w-full min-w-[1320px] text-sm">
                                     <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                                         <tr>
-                                            {["Sr No.", "Product", "Required Size", "Thickness", "Quantity", "Pieces per sheet", "Material cost", "Processing cost", "Packaging cost", "Profit %", "Final selling price/piece", "Total item value", "Actions"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
+                                            {["Sr No.", "Drawing No.", "Product", "Required Size", "Thickness", "Quantity", "Pieces per sheet", "Material cost", "Processing cost", "P&F cost", "Profit %", "Cost per pc", "Total item value", "Actions"].map(head => <th key={head} className="p-3 text-left">{head}</th>)}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {filteredItems.map((item, index) => (
                                             <tr key={item.id} className="border-t border-slate-100">
                                                 <td className="p-3 font-bold">{index + 1}</td>
+                                                    <td className="p-3 font-bold">{item.drawingNo || "—"}</td>
                                                 <td className="p-3">{item.product}</td>
                                                 <td className="p-3">{item.requiredSize}</td>
                                                 <td className="p-3">{item.cutThickness} mm</td>
@@ -2201,7 +2367,7 @@ import {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {!filteredItems.length && <tr><td colSpan="13" className="p-6 text-center text-slate-500 font-bold">No calculated items added yet.</td></tr>}
+                                        {!filteredItems.length && <tr><td colSpan="14" className="p-6 text-center text-slate-500 font-bold">No calculated items added yet.</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
